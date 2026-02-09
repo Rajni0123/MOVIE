@@ -1,0 +1,196 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+// Movies Table
+model Movie {
+  id              Int       @id @default(autoincrement())
+  tmdbId          String?   @unique @map("tmdb_id")
+  imdbId          String?   @unique @map("imdb_id")
+  title           String
+  slug            String    @unique
+  description     String?
+  releaseDate     DateTime? @map("release_date")
+  runtime         Int?
+  genres          String?   // JSON stored as string for SQLite
+  cast            String?   // JSON stored as string for SQLite
+  director        String?
+  rating          Float?
+  posterUrl       String?   @map("poster_url")
+  backdropUrl     String?   @map("backdrop_url")
+  trailerUrl      String?   @map("trailer_url")
+  screenshots     String?   // JSON array of screenshot URLs
+  status          String    @default("PUBLISHED")
+  metaTitle       String?   @map("meta_title")
+  metaDescription String?   @map("meta_description")
+  metaKeywords    String?   @map("meta_keywords")
+  indexedAt       DateTime? @map("indexed_at")
+  viewCount       Int       @default(0) @map("view_count")
+  shareCount      Int       @default(0) @map("share_count")
+  isFeatured      Boolean   @default(false) @map("is_featured")
+  featuredOrder   Int       @default(0) @map("featured_order")
+  isActive        Boolean   @default(true) @map("is_active")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  streamingLinks  StreamingLink[]
+  seoIndexStatus  SeoIndexStatus?
+  shareLogs       ShareLog[]
+
+  @@map("movies")
+}
+
+// Share Logs Table - Track individual shares
+model ShareLog {
+  id          Int       @id @default(autoincrement())
+  movieId     Int       @map("movie_id")
+  platform    String?   // e.g., "whatsapp", "telegram", "copy", "native"
+  userAgent   String?   @map("user_agent")
+  ipAddress   String?   @map("ip_address")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  movie       Movie     @relation(fields: [movieId], references: [id], onDelete: Cascade)
+
+  @@map("share_logs")
+}
+
+// Streaming Links Table
+model StreamingLink {
+  id          Int      @id @default(autoincrement())
+  movieId     Int      @map("movie_id")
+  sourceName  String   @map("source_name")
+  quality     String?
+  language    String?
+  linkUrl     String   @map("link_url")
+  isActive    Boolean  @default(true) @map("is_active")
+  priority    Int      @default(0)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  movie       Movie    @relation(fields: [movieId], references: [id], onDelete: Cascade)
+
+  @@map("streaming_links")
+}
+
+// Scraping Sources Table
+model ScrapingSource {
+  id            Int       @id @default(autoincrement())
+  name          String
+  baseUrl       String    @map("base_url")
+  scrapingRules String?   @map("scraping_rules") // JSON stored as string
+  isActive      Boolean   @default(true) @map("is_active")
+  lastScraped   DateTime? @map("last_scraped")
+  createdAt     DateTime  @default(now()) @map("created_at")
+
+  scrapingJobs  ScrapingJob[]
+
+  @@map("scraping_sources")
+}
+
+// Scraping Jobs Table
+model ScrapingJob {
+  id          Int       @id @default(autoincrement())
+  sourceId    Int?      @map("source_id")
+  status      String    @default("PENDING")
+  moviesFound Int       @default(0) @map("movies_found")
+  moviesAdded Int       @default(0) @map("movies_added")
+  errors      String?   // JSON stored as string
+  startedAt   DateTime? @map("started_at")
+  completedAt DateTime? @map("completed_at")
+
+  source      ScrapingSource? @relation(fields: [sourceId], references: [id])
+
+  @@map("scraping_jobs")
+}
+
+// SEO Index Status Table
+model SeoIndexStatus {
+  id                  Int       @id @default(autoincrement())
+  movieId             Int       @unique @map("movie_id")
+  submittedToGoogle   Boolean   @default(false) @map("submitted_to_google")
+  googleIndexed       Boolean   @default(false) @map("google_indexed")
+  submittedToIndexnow Boolean   @default(false) @map("submitted_to_indexnow")
+  lastSubmitted       DateTime? @map("last_submitted")
+  createdAt           DateTime  @default(now()) @map("created_at")
+
+  movie               Movie     @relation(fields: [movieId], references: [id], onDelete: Cascade)
+
+  @@map("seo_index_status")
+}
+
+// Admin Users Table
+model AdminUser {
+  id           Int       @id @default(autoincrement())
+  email        String    @unique
+  passwordHash String    @map("password_hash")
+  name         String?
+  isActive     Boolean   @default(true) @map("is_active")
+  lastLoginAt  DateTime? @map("last_login_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  updatedAt    DateTime  @updatedAt @map("updated_at")
+
+  @@map("admin_users")
+}
+
+// Notifications/Announcements Table
+model Notification {
+  id          Int       @id @default(autoincrement())
+  title       String
+  message     String
+  type        String    @default("info") // info, warning, success, error
+  linkUrl     String?   @map("link_url")
+  linkText    String?   @map("link_text")
+  isActive    Boolean   @default(true) @map("is_active")
+  startDate   DateTime? @map("start_date")
+  endDate     DateTime? @map("end_date")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  @@map("notifications")
+}
+
+// Site Settings Table (single row for global settings)
+model SiteSetting {
+  id                  Int       @id @default(autoincrement())
+  key                 String    @unique
+  value               String
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  @@map("site_settings")
+}
+
+// Footer Links Table
+model FooterLink {
+  id          Int       @id @default(autoincrement())
+  section     String    // "quick_links", "legal", "genres"
+  label       String
+  url         String
+  sortOrder   Int       @default(0) @map("sort_order")
+  isActive    Boolean   @default(true) @map("is_active")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  @@map("footer_links")
+}
+
+// Active Visitors Table - Track real-time visitors
+model ActiveVisitor {
+  id          String    @id // Session ID (unique per visitor)
+  page        String    // Current page URL
+  userAgent   String?   @map("user_agent")
+  ipAddress   String?   @map("ip_address")
+  country     String?
+  device      String?   // mobile, tablet, desktop
+  lastSeen    DateTime  @default(now()) @map("last_seen")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  @@map("active_visitors")
+}

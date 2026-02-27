@@ -352,11 +352,31 @@ function discoverMovies($: cheerio.CheerioAPI, baseUrl: string, pageUrl: string)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const extractMovieFromElement = (el: any): { title: string; url: string; year?: string; posterUrl?: string } | null => {
     const href = $(el).attr("href") || "";
-    let title = $(el).attr("title") ||
-                $(el).attr("alt") ||
-                $(el).find("img").attr("alt") ||
-                $(el).find(".title").text().trim() ||
-                $(el).text().trim();
+
+    // IMPROVED: Better title extraction - check multiple sources
+    // 1. First check h3/h2 inside link (hdmovig2 pattern)
+    let title = $(el).find("h3").first().text().trim() ||
+                $(el).find("h2").first().text().trim() ||
+                $(el).find(".entry-title").text().trim() ||
+                $(el).find(".title").text().trim();
+
+    // 2. If not found, check parent container for h3 (some sites have title in sibling element)
+    if (!title) {
+      const parent = $(el).closest(".item, .post, .movie, article, .card");
+      if (parent.length) {
+        title = parent.find("h3").first().text().trim() ||
+                parent.find("h2").first().text().trim() ||
+                parent.find(".entry-title").text().trim() ||
+                parent.find(".title").text().trim();
+      }
+    }
+
+    // 3. Fallback to link attributes and text
+    if (!title) {
+      title = $(el).attr("title") ||
+              $(el).find("img").attr("alt") ||
+              $(el).text().trim();
+    }
 
     if (!href || seenUrls.has(href)) return null;
     if (href.startsWith("#") || href.startsWith("javascript:") || href.startsWith("mailto:")) return null;
@@ -378,7 +398,18 @@ function discoverMovies($: cheerio.CheerioAPI, baseUrl: string, pageUrl: string)
 
     const year = extractYearFromUrl(fullUrl);
     const poster = $(el).find("img").attr("src") || $(el).find("img").attr("data-src");
-    title = title || fullUrl.split("/").filter(Boolean).pop()?.replace(/-/g, " ") || "";
+
+    // 4. If still no title, try URL slug (but clean it up better)
+    if (!title) {
+      const slug = fullUrl.split("/").filter(Boolean).pop() || "";
+      // Skip generic slugs like "movies-5365"
+      if (!slug.match(/^movies-\d+$/i)) {
+        title = slug.replace(/-/g, " ");
+      }
+    }
+
+    // 5. If URL has generic slug and we still have no title, mark for later TMDB lookup
+    title = title || "[Title Pending]";
     seenUrls.add(href);
 
     return { title: title.slice(0, 200), url: fullUrl, year: year?.toString(), posterUrl: poster };
@@ -405,11 +436,29 @@ function discoverMovies($: cheerio.CheerioAPI, baseUrl: string, pageUrl: string)
     try {
       $(selector).each((_, el) => {
         const href = $(el).attr("href") || "";
-        let title = $(el).attr("title") ||
-                    $(el).attr("alt") ||
-                    $(el).find("img").attr("alt") ||
-                    $(el).find(".title").text().trim() ||
-                    $(el).text().trim();
+        // IMPROVED: Better title extraction - check h3/h2 inside link first
+        let title = $(el).find("h3").first().text().trim() ||
+                    $(el).find("h2").first().text().trim() ||
+                    $(el).find(".entry-title").text().trim() ||
+                    $(el).find(".title").text().trim();
+
+        // If not found in link, check parent container (hdmovig2 pattern)
+        if (!title) {
+          const parent = $(el).closest(".item, .post, .movie, article, .card");
+          if (parent.length) {
+            title = parent.find("h3").first().text().trim() ||
+                    parent.find("h2").first().text().trim() ||
+                    parent.find(".entry-title").text().trim() ||
+                    parent.find(".title").text().trim();
+          }
+        }
+
+        // Fallback to link attributes and text
+        if (!title) {
+          title = $(el).attr("title") ||
+                  $(el).find("img").attr("alt") ||
+                  $(el).text().trim();
+        }
 
         if (!href || seenUrls.has(href)) return;
         if (href.startsWith("#") || href.startsWith("javascript:") || href.startsWith("mailto:")) return;

@@ -496,9 +496,12 @@ export default function BulkScrapingPage() {
         const cleanUrl = selectedYearUrl.replace(/\/movies\/page\/\d+/i, '').replace(/\/page\/\d+/i, '').replace(/\/$/, '');
         paginationUrls = [`${cleanUrl}/movies/page/${nextPage}/`];
         console.log("Using movies-path pattern:", paginationUrls[0]);
-      } else if (paginationInfo?.pagePattern === "genre-path") {
+      } else if (paginationInfo?.pagePattern === "genre-path" ||
+                 selectedYearUrl.includes('/genre/') ||
+                 selectedYearUrl.includes('/category/') ||
+                 selectedYearUrl.includes('/tag/')) {
         // Genre path pattern: /genre/hindi-dubbed/page/2/
-        const cleanUrl = selectedYearUrl.replace(/\/page\/\d+/i, '').replace(/\/$/, '');
+        const cleanUrl = selectedYearUrl.replace(/\/page\/\d+\/?/i, '').replace(/\/$/, '');
         paginationUrls = [`${cleanUrl}/page/${nextPage}/`];
         console.log("Using genre-path pattern:", paginationUrls[0]);
       } else if (paginationInfo?.pagePattern === "path") {
@@ -673,27 +676,36 @@ export default function BulkScrapingPage() {
         
         // Build URL for next page
         let nextPageUrl = "";
-        const baseUrl = selectedYearUrl.split('?')[0].replace(/\/page\/\d+.*$/, '').replace(/\/$/, '');
+        // Clean the URL - remove existing page patterns and trailing slashes
+        const baseUrl = selectedYearUrl
+          .split('?')[0]
+          .replace(/\/page\/\d+\/?$/i, '')
+          .replace(/\/page-\d+\/?$/i, '')
+          .replace(/\/\d+\/?$/, '')
+          .replace(/\/$/, '');
         const hasMoviesPath = baseUrl.includes('/movies/');
-        const hasGenrePath = baseUrl.includes('/genre/') || baseUrl.includes('/category/');
-        
+        const hasGenrePath = baseUrl.includes('/genre/') || baseUrl.includes('/category/') || baseUrl.includes('/tag/');
+
+        console.log(`Building pagination URL: page=${nextPage}, baseUrl=${baseUrl}, pattern=${paginationInfo?.pagePattern}, hasGenrePath=${hasGenrePath}`);
+
         if (paginationInfo?.pagePattern === "query") {
           const urlObj = new URL(selectedYearUrl);
           urlObj.searchParams.set("page", nextPage.toString());
           nextPageUrl = urlObj.toString();
         } else if (paginationInfo?.pagePattern === "movies-path") {
           nextPageUrl = `${baseUrl}/movies/page/${nextPage}/`;
-        } else if (paginationInfo?.pagePattern === "genre-path") {
+        } else if (paginationInfo?.pagePattern === "genre-path" || hasGenrePath) {
+          // For genre/category pages, use /page/N/ pattern
           nextPageUrl = `${baseUrl}/page/${nextPage}/`;
         } else if (paginationInfo?.pagePattern === "path") {
           nextPageUrl = `${baseUrl}/page/${nextPage}/`;
         } else if (hasMoviesPath) {
           nextPageUrl = `${baseUrl}/movies/page/${nextPage}/`;
-        } else if (hasGenrePath) {
-          nextPageUrl = `${baseUrl}/page/${nextPage}/`;
         } else {
           nextPageUrl = `${baseUrl}/page/${nextPage}/`;
         }
+
+        console.log(`Next page URL: ${nextPageUrl}`);
 
         try {
           const res = await fetch("/api/scraping/bulk/discover", {
@@ -1380,7 +1392,7 @@ export default function BulkScrapingPage() {
                       size="sm"
                       variant="default"
                       onClick={handleImportAllFiles}
-                      disabled={loadingMoreMovies || loadingAllPages || !paginationInfo?.hasNextPage}
+                      disabled={loadingMoreMovies || loadingAllPages}
                       className="bg-green-600 hover:bg-green-700"
                     >
                       {loadingAllPages ? (
@@ -1397,7 +1409,8 @@ export default function BulkScrapingPage() {
                     </Button>
                     
                     <span className="text-xs text-muted-foreground">
-                      Page {currentPage} • {discoveredMovies.length} discovered • {filteredMovies.length} new
+                      Page {currentPage}{paginationInfo?.totalPages ? ` of ${paginationInfo.totalPages}` : ''} • {discoveredMovies.length} discovered • {filteredMovies.length} new
+                      {paginationInfo?.hasNextPage && " • More pages available"}
                     </span>
                   </div>
                   

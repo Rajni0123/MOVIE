@@ -838,6 +838,11 @@ function detectPagination($: cheerio.CheerioAPI, baseUrl: string, currentUrl: st
   let totalPages: number | null = null;
   let pagePattern: string | null = null;
 
+  // Detect if this is a genre/category page (for better pagination handling)
+  const isGenrePage = /\/genre\/[^\/]+\/?$/i.test(currentUrl) ||
+                       /\/category\/[^\/]+\/?$/i.test(currentUrl) ||
+                       /\/tag\/[^\/]+\/?$/i.test(currentUrl);
+
   // Try to find pagination links - more aggressive search
   const paginationSelectors = [
     '.pagination a',
@@ -856,6 +861,12 @@ function detectPagination($: cheerio.CheerioAPI, baseUrl: string, currentUrl: st
     'a[class*="Next"]',
     '.page-nav a',
     '.paging a',
+    // Additional selectors for movie sites
+    '.nav-links a',
+    '.navigation a',
+    '.page-link',
+    'a[href*="/page/"]',
+    'a[href*="?page="]',
   ];
 
   // Find next page link
@@ -963,6 +974,16 @@ function detectPagination($: cheerio.CheerioAPI, baseUrl: string, currentUrl: st
     pagePattern = "movies-path"; // /movies/page/2/
   } else if (currentUrl.match(/\/genre\/[^\/]+\/page\/\d+/i) || currentUrl.match(/\/category\/[^\/]+\/page\/\d+/i)) {
     pagePattern = "genre-path"; // /genre/hindi-dubbed/page/2/
+  } else if (currentUrl.match(/\/genre\/[^\/]+\/?$/i) || currentUrl.match(/\/category\/[^\/]+\/?$/i)) {
+    // First page of genre/category - set pattern for page 2
+    pagePattern = "genre-path";
+    // For genre pages on first page, build next page URL
+    if (!nextPageUrl) {
+      const cleanUrl = currentUrl.replace(/\/$/, '');
+      nextPageUrl = `${cleanUrl}/page/2/`;
+      hasNextPage = true; // Assume pagination exists for genre pages
+      console.log(`Genre page detected (first page), assuming pagination exists: ${nextPageUrl}`);
+    }
   } else if (currentUrl.match(/\/page\/\d+/i)) {
     pagePattern = "path"; // /page/2/
   } else if (currentUrl.match(/\/\d+$/)) {
@@ -975,6 +996,17 @@ function detectPagination($: cheerio.CheerioAPI, baseUrl: string, currentUrl: st
   // If we found page numbers but no explicit next link, assume pagination exists
   if (!hasNextPage && pageNumbers.length > 0 && currentPage < Math.max(...pageNumbers)) {
     hasNextPage = true;
+  }
+
+  // IMPORTANT: For genre/category pages, always assume pagination exists if movies were found
+  // Most movie sites paginate their genre listings
+  if (isGenrePage && !hasNextPage && currentPage === 1) {
+    hasNextPage = true;
+    if (!nextPageUrl) {
+      const cleanUrl = currentUrl.replace(/\/$/, '');
+      nextPageUrl = `${cleanUrl}/page/2/`;
+    }
+    console.log(`Genre page on first page - assuming more pages exist: ${nextPageUrl}`);
   }
 
   return {

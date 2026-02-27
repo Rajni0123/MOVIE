@@ -6,8 +6,10 @@ import { NotificationBanner } from "@/components/public/NotificationBanner";
 import { BannerAd } from "@/components/public/AdDisplay";
 import prisma from "@/lib/db/prisma";
 import { generateHomeMetadata } from "@/lib/seo/meta-generator";
+import { generateWebsiteSchema, generateOrganizationSchema, schemaToScript } from "@/lib/seo/schema-generator";
 import { Film } from "lucide-react";
 import Link from "next/link";
+import Script from "next/script";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0; // Always fetch fresh data
@@ -111,14 +113,33 @@ export default async function HomePage() {
     }
   }
 
-  return (
-    <div className="min-h-screen bg-background">
-      <Header />
+  // Generate schema for SEO
+  const websiteSchema = generateWebsiteSchema();
+  const orgSchema = generateOrganizationSchema();
 
-      {/* Notification Banner */}
-      <div className="container mt-2 md:mt-4">
-        <NotificationBanner />
-      </div>
+  return (
+    <>
+      {/* JSON-LD Schema for SEO */}
+      <Script
+        id="website-schema"
+        type="application/ld+json"
+        strategy="beforeInteractive"
+        dangerouslySetInnerHTML={{ __html: schemaToScript(websiteSchema) }}
+      />
+      <Script
+        id="org-schema"
+        type="application/ld+json"
+        strategy="beforeInteractive"
+        dangerouslySetInnerHTML={{ __html: schemaToScript(orgSchema) }}
+      />
+
+      <div className="min-h-screen bg-background">
+        <Header />
+
+        {/* Notification Banner */}
+        <div className="container mt-2 md:mt-4">
+          <NotificationBanner />
+        </div>
 
       {/* Header Banner Ad - Desktop Only */}
       <div className="container mt-4 hidden md:block">
@@ -207,5 +228,6 @@ export default async function HomePage() {
       {/* Bottom padding for mobile nav */}
       <div className="h-16 md:hidden" suppressHydrationWarning />
     </div>
+    </>
   );
 }

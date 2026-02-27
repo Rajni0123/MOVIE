@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { Metadata } from "next";
+import Script from "next/script";
 import { Header } from "@/components/shared/Header";
 import { Footer } from "@/components/shared/Footer";
 import { MobileNav } from "@/components/shared/MobileNav";
@@ -12,7 +13,7 @@ import { ViewTracker } from "@/components/public/ViewTracker";
 import { BannerAd, SidebarAd } from "@/components/public/AdDisplay";
 import prisma from "@/lib/db/prisma";
 import { generateMovieMetadata } from "@/lib/seo/meta-generator";
-import { generateMovieSchema, schemaToScript } from "@/lib/seo/schema-generator";
+import { generateMovieSchema, generateFAQSchema, schemaToScript } from "@/lib/seo/schema-generator";
 import { formatDate, formatRuntime } from "@/lib/utils";
 import Link from "next/link";
 
@@ -122,30 +123,40 @@ export default async function MoviePage({ params, searchParams }: PageProps) {
     screenshots = movie.screenshots ? JSON.parse(movie.screenshots) : [];
   } catch { screenshots = []; }
 
-  const schema = generateMovieSchema(movie);
+  const movieSchema = generateMovieSchema(movie);
+  const faqSchema = generateFAQSchema(movie);
 
   // Download links
   const downloadLinks = movie.streamingLinks;
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
-
-      {/* Preview Banner for Draft Movies */}
-      {isPreview && movie.status === "DRAFT" && (
-        <div className="bg-yellow-500 px-4 py-2 text-center text-sm font-medium text-black">
-          ⚠️ Preview Mode - This movie is not published yet. Only admins can see this page.
-        </div>
-      )}
-
-      {/* Track view for popularity */}
-      <ViewTracker movieId={movie.id} />
-
-      {/* Schema Markup */}
-      <script
+    <>
+      {/* JSON-LD Schema Markup for SEO */}
+      <Script
+        id="movie-schema"
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: schemaToScript(schema) }}
+        strategy="beforeInteractive"
+        dangerouslySetInnerHTML={{ __html: schemaToScript(movieSchema) }}
       />
+      <Script
+        id="faq-schema"
+        type="application/ld+json"
+        strategy="beforeInteractive"
+        dangerouslySetInnerHTML={{ __html: schemaToScript(faqSchema) }}
+      />
+
+      <div className="min-h-screen bg-background">
+        <Header />
+
+        {/* Preview Banner for Draft Movies */}
+        {isPreview && movie.status === "DRAFT" && (
+          <div className="bg-yellow-500 px-4 py-2 text-center text-sm font-medium text-black">
+            ⚠️ Preview Mode - This movie is not published yet. Only admins can see this page.
+          </div>
+        )}
+
+        {/* Track view for popularity */}
+        <ViewTracker movieId={movie.id} />
 
       {/* Backdrop - Use poster stretched if no backdrop available */}
       <div className="relative h-[30vh] w-full md:h-[40vh] overflow-hidden">
@@ -729,5 +740,6 @@ export default async function MoviePage({ params, searchParams }: PageProps) {
       {/* Bottom padding for mobile nav */}
       <div className="h-20 md:hidden" suppressHydrationWarning />
     </div>
+    </>
   );
 }

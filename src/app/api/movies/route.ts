@@ -156,12 +156,11 @@ export async function POST(request: NextRequest) {
     const slug = body.slug || generateSlug(body.title, year);
 
     // Check if movie already exists by slug OR similar title
-    const normalizedTitle = body.title.toLowerCase().replace(/[^a-z0-9]/g, '');
     const existingMovie = await prisma.movie.findFirst({
       where: {
         OR: [
           { slug: slug },
-          { title: { equals: body.title, mode: 'insensitive' } },
+          { title: body.title },
         ],
       },
     });

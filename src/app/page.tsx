@@ -21,7 +21,7 @@ async function getLatestMovies() {
         isActive: true,
       },
       orderBy: { createdAt: "desc" },
-      take: 12,
+      take: 18,
     });
   } catch (error) {
     console.error("Error fetching latest movies:", error);
@@ -70,10 +70,10 @@ async function getPopularMovies() {
       return { ...movie, popularityScore: score };
     });
 
-    // Sort by popularity score and return top 12
+    // Sort by popularity score and return top 6
     return scoredMovies
       .sort((a, b) => b.popularityScore - a.popularityScore)
-      .slice(0, 12);
+      .slice(0, 6);
   } catch (error) {
     console.error("Error fetching popular movies:", error);
     return [];
@@ -92,7 +92,7 @@ export default async function HomePage() {
     
     // If no popular movies but we have latest, use latest for popular too
     if (popularMovies.length === 0 && latestMovies.length > 0) {
-      popularMovies = latestMovies.slice(0, 12).map(m => ({ ...m, popularityScore: 0 }));
+      popularMovies = latestMovies.slice(0, 6).map(m => ({ ...m, popularityScore: 0 }));
     }
   } catch (error) {
     console.error("Error loading homepage:", error);
@@ -101,7 +101,7 @@ export default async function HomePage() {
       latestMovies = await prisma.movie.findMany({
         where: { isActive: true },
         orderBy: { createdAt: "desc" },
-        take: 12,
+        take: 18,
       });
       if (latestMovies.length > 0 && popularMovies.length === 0) {
         popularMovies = latestMovies.map(m => ({ ...m, popularityScore: 0 }));

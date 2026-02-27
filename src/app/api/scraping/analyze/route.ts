@@ -187,11 +187,17 @@ function countMoviesOnPage($: cheerio.CheerioAPI, baseUrl: string, pageUrl: stri
     'a[href*="/film/"]', 'a[href*="/watch/"]',
     'a[href*="-download"]', 'a[href*="-movie"]',
     ".grid-item a", ".card a", "article a",
+    // WorldFree4u and similar sites - image card links
+    'a.cursor-pointer', 'a.group', 'a.block',
+    'a[class*="cursor-pointer"]', 'a[class*="overflow-hidden"]',
+    // Year-based URL patterns
+    'a[href*="-2024"]', 'a[href*="-2025"]', 'a[href*="-2026"]',
+    'a[href*="-season-"]', 'a[href*="-complete"]',
   ];
 
   const skipPatterns = [
     /\/category\//i, /\/tag\//i, /\/author\//i, /\/search/i,
-    /\/page\/\d+$/i, /\/genre\//i, /\?s=/i, /wp-login/i,
+    /\/page\/\d+\/?$/i, /\/genre\//i, /\?s=/i, /wp-login/i,
     /\/login/i, /\/register/i, /\/account/i, /\/about/i,
     /\/contact/i, /\/privacy/i, /\/terms/i,
   ];
@@ -200,7 +206,10 @@ function countMoviesOnPage($: cheerio.CheerioAPI, baseUrl: string, pageUrl: stri
     try {
       $(selector).each((_, el) => {
         const href = $(el).attr("href") || "";
-        const title = $(el).attr("title") || $(el).text().trim();
+        // Get title from multiple sources including child img alt
+        const title = $(el).attr("title") ||
+                      $(el).find("img").attr("alt") ||
+                      $(el).text().trim();
 
         if (!href || seenUrls.has(href)) return;
         if (href.startsWith("#") || href.startsWith("javascript:")) return;

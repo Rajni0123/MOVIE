@@ -51,7 +51,7 @@ async function getPopularMovies() {
   });
 
   return {
-    featured: [], // Will be enabled after Prisma client regeneration
+    featured: [] as typeof recentMovies, // Will be enabled after Prisma client regeneration
     recent: recentMovies,
     mostViewed: mostViewedMovies,
   };

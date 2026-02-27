@@ -552,13 +552,17 @@ function extractBackdropUrl($: cheerio.CheerioAPI, baseUrl: string): string {
   }
 
   // Priority 2: Check for background-image in style attributes
+  let foundBackdrop = "";
   $('[style*="background"]').each((_, el) => {
+    if (foundBackdrop) return false; // Break loop if found
     const style = $(el).attr("style") || "";
     const match = style.match(/background(?:-image)?:\s*url\(['"]?([^'")\s]+)['"]?\)/i);
     if (match && match[1] && isImageUrl(match[1])) {
-      return makeAbsoluteUrl(match[1], baseUrl);
+      foundBackdrop = makeAbsoluteUrl(match[1], baseUrl);
+      return false; // Break loop
     }
   });
+  if (foundBackdrop) return foundBackdrop;
 
   // Priority 3: Look for wide/landscape images (likely backdrops)
   const wideImages: string[] = [];
@@ -654,8 +658,8 @@ function extractScreenshots($: cheerio.CheerioAPI, baseUrl: string): string[] {
       $(selector).each((_, el) => {
         if (screenshots.length >= 15) return false;
         const src = $(el).attr("src") || $(el).attr("data-src") || $(el).attr("data-lazy-src") || $(el).attr("data-original");
-        addScreenshot(src);
-        
+        if (src) addScreenshot(src);
+
         // Also check for larger version in parent link
         const parentHref = $(el).parent("a").attr("href");
         if (parentHref && isImageUrl(parentHref)) {
@@ -683,9 +687,9 @@ function extractScreenshots($: cheerio.CheerioAPI, baseUrl: string): string[] {
         $(selector).each((i, el) => {
           if (screenshots.length >= 15) return false;
           if (i < 2) return; // Skip first 2 images (likely poster/banner)
-          
+
           const src = $(el).attr("src") || $(el).attr("data-src") || $(el).attr("data-lazy-src");
-          addScreenshot(src);
+          if (src) addScreenshot(src);
         });
       } catch {
         continue;

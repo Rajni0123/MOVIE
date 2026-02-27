@@ -92,7 +92,7 @@ export default async function HomePage() {
     
     // If no popular movies but we have latest, use latest for popular too
     if (popularMovies.length === 0 && latestMovies.length > 0) {
-      popularMovies = latestMovies.slice(0, 12);
+      popularMovies = latestMovies.slice(0, 12).map(m => ({ ...m, popularityScore: 0 }));
     }
   } catch (error) {
     console.error("Error loading homepage:", error);
@@ -104,7 +104,7 @@ export default async function HomePage() {
         take: 12,
       });
       if (latestMovies.length > 0 && popularMovies.length === 0) {
-        popularMovies = latestMovies;
+        popularMovies = latestMovies.map(m => ({ ...m, popularityScore: 0 }));
       }
     } catch (fallbackError) {
       console.error("Fallback query also failed:", fallbackError);

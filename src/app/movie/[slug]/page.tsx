@@ -263,7 +263,7 @@ export default async function MoviePage({ params, searchParams }: PageProps) {
             </div>
             {/* Quick Stats under poster */}
             <div className="mt-4 space-y-2">
-              {movie.rating && parseFloat(movie.rating) > 0 && (
+              {movie.rating && Number(movie.rating) > 0 && (
                 <div className="flex items-center justify-between rounded-lg bg-yellow-500/10 p-3">
                   <span className="text-sm text-muted-foreground">IMDB Rating</span>
                   <div className="flex items-center gap-1">
@@ -559,7 +559,7 @@ export default async function MoviePage({ params, searchParams }: PageProps) {
               <div className="mt-6 hidden rounded-xl border bg-card p-4 md:mt-8 md:block md:p-6">
                 <h2 className="mb-4 text-lg font-bold">Why Watch {cleanTitle}?</h2>
                 <div className="grid gap-4 sm:grid-cols-2">
-                  {movie.rating && parseFloat(movie.rating) > 0 && (
+                  {movie.rating && Number(movie.rating) > 0 && (
                     <div className="rounded-lg bg-yellow-500/10 p-4">
                       <div className="flex items-center gap-2">
                         <Star className="h-5 w-5 fill-yellow-500 text-yellow-500" />
@@ -633,7 +633,7 @@ export default async function MoviePage({ params, searchParams }: PageProps) {
               <p>
                 As a {genres.join(", ")} movie, <strong>{cleanTitle}</strong> stands out with its compelling storyline 
                 and impressive performances. Fans of {genres[0]} movies will definitely appreciate what this film has to offer. 
-                {movie.rating && parseFloat(movie.rating) > 0 ? ` With a rating of ${movie.rating}/10, it has received positive reviews from critics and audiences alike.` : ""}
+                {movie.rating && Number(movie.rating) > 0 ? ` With a rating of ${movie.rating}/10, it has received positive reviews from critics and audiences alike.` : ""}
               </p>
             )}
 

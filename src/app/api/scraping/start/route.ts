@@ -115,7 +115,7 @@ async function scrapeInBackground(
         status: "COMPLETED",
         moviesFound,
         moviesAdded,
-        errors: errors.length > 0 ? errors : undefined,
+        errors: errors.length > 0 ? JSON.stringify(errors) : undefined,
         completedAt: new Date(),
       },
     });
@@ -127,7 +127,7 @@ async function scrapeInBackground(
         status: "FAILED",
         moviesFound,
         moviesAdded,
-        errors: [{ message: String(error), timestamp: new Date() }],
+        errors: JSON.stringify([{ message: String(error), timestamp: new Date() }]),
         completedAt: new Date(),
       },
     });

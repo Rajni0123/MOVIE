@@ -31,6 +31,7 @@ interface DiscoveredMovie {
 
 interface ScrapedMovie {
   title: string;
+  url: string;
   description: string;
   posterUrl: string;
   backdropUrl: string;

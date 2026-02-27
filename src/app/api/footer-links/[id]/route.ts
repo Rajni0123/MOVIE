@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/db/prisma";
 import { requireAuth } from "@/lib/auth";
 
@@ -15,7 +15,7 @@ interface FooterLink {
 
 // GET /api/footer-links/[id] - Get single footer link
 export async function GET(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -54,7 +54,7 @@ export async function GET(
 
 // PUT /api/footer-links/[id] - Update footer link
 export async function PUT(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const auth = await requireAuth(request);
@@ -102,7 +102,7 @@ export async function PUT(
 
 // DELETE /api/footer-links/[id] - Delete footer link
 export async function DELETE(
-  request: Request,
+  request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const auth = await requireAuth(request);

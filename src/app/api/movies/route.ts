@@ -33,7 +33,7 @@ export async function GET(request: NextRequest) {
 
     if (genre) {
       where.genres = {
-        array_contains: [genre],
+        contains: genre,
       };
     }
 

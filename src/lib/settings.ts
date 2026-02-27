@@ -12,6 +12,7 @@ export interface SiteSettings {
   instagramUrl: string;
   googleAnalyticsId: string;
   footerText: string;
+  [key: string]: string; // Index signature for dynamic access
 }
 
 const DEFAULT_SETTINGS: SiteSettings = {

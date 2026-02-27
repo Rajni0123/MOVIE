@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/db/prisma";
 import { requireAuth } from "@/lib/auth";
 
@@ -56,7 +56,7 @@ export async function GET() {
 }
 
 // POST /api/footer-links - Create new footer link (admin only)
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   const auth = await requireAuth(request);
   if (!auth.authenticated) {
     return NextResponse.json({ error: auth.error }, { status: 401 });

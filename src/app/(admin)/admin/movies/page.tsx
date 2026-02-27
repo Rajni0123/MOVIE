@@ -519,8 +519,8 @@ export default function MoviesPage() {
                         </td>
                         <td className="py-4">
                           <span className={`rounded-full px-2 py-1 text-xs font-medium ${
-                            movie.streamingLinks?.length > 0 
-                              ? "bg-green-100 text-green-700" 
+                            (movie.streamingLinks?.length ?? 0) > 0
+                              ? "bg-green-100 text-green-700"
                               : "bg-red-100 text-red-700"
                           }`}>
                             {movie.streamingLinks?.length || 0} links

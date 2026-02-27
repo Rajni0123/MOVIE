@@ -129,6 +129,37 @@ export async function POST(request: NextRequest) {
     const rawTitle = extractTitle($);
     const cleanedTitle = removeWebsiteNames(rawTitle, url);
     const releaseYear = extractReleaseYear($);
+
+    // Skip listing/pagination pages that aren't actual movies
+    const invalidTitlePatterns = [
+      /official home of/i,
+      /movies\s*-?\s*page\s*\d+/i,
+      /page\s*\d+\s*of\s*\d+/i,
+      /^page\s*\d+$/i,
+      /category\s*:/i,
+      /archives?\s*:/i,
+      /search results/i,
+      /^home$/i,
+      /^movies$/i,
+      /^download$/i,
+      /worldfree4u\.trade\s*movies/i,
+    ];
+
+    const isInvalidPage = invalidTitlePatterns.some(pattern => pattern.test(cleanedTitle));
+    if (isInvalidPage) {
+      return NextResponse.json(
+        { success: false, error: "This is a listing/pagination page, not a movie page. Title: " + cleanedTitle },
+        { status: 400 }
+      );
+    }
+
+    // Also skip if title is too short or looks like garbage
+    if (cleanedTitle.length < 2 || cleanedTitle.length > 200) {
+      return NextResponse.json(
+        { success: false, error: "Invalid title extracted: " + cleanedTitle },
+        { status: 400 }
+      );
+    }
     
     // Extract download links from main page
     let downloadLinks = extractDownloadLinks($, url);

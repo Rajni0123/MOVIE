@@ -153,16 +153,28 @@ export async function POST(request: NextRequest) {
 
     // Generate slug if not provided
     const year = extractYear(body.releaseDate);
-    let slug = body.slug || generateSlug(body.title, year);
+    const slug = body.slug || generateSlug(body.title, year);
 
-    // Check if slug exists
-    const existingMovie = await prisma.movie.findUnique({
-      where: { slug },
+    // Check if movie already exists by slug OR similar title
+    const normalizedTitle = body.title.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const existingMovie = await prisma.movie.findFirst({
+      where: {
+        OR: [
+          { slug: slug },
+          { title: { equals: body.title, mode: 'insensitive' } },
+        ],
+      },
     });
 
     if (existingMovie) {
-      // Append a random suffix
-      slug = `${slug}-${Date.now().toString(36)}`;
+      return NextResponse.json<ApiResponse>(
+        {
+          success: false,
+          error: `Movie already exists: "${existingMovie.title}" (ID: ${existingMovie.id})`,
+          data: { existingId: existingMovie.id, existingSlug: existingMovie.slug }
+        },
+        { status: 409 } // Conflict
+      );
     }
 
     // Generate meta fields if not provided

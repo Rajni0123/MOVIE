@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Fetch the page
+    // Fetch the page (follow redirects)
     console.log(`[DISCOVER] Fetching URL: ${url}`);
     const response = await fetch(url, {
       headers: {
@@ -34,6 +34,7 @@ export async function POST(request: NextRequest) {
         "Pragma": "no-cache",
       },
       cache: "no-store",
+      redirect: "follow",
     });
 
     console.log(`[DISCOVER] Response status: ${response.status}`);

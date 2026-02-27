@@ -744,14 +744,21 @@ function extractDownloadLinks($: cheerio.CheerioAPI, baseUrl: string): { quality
     }
   };
 
-  // Helper to extract quality, source, and size from button text like "1080P [Gdflix] 2.21 GB"
-  const parseButtonText = (text: string): { quality?: string; source?: string; size?: string } => {
-    const result: { quality?: string; source?: string; size?: string } = {};
+  // Helper to extract quality, source, size, and codec from button text
+  // Handles formats like "1080P [Gdflix] 2.21 GB" and "720p AAC - 957MB"
+  const parseButtonText = (text: string): { quality?: string; source?: string; size?: string; codec?: string } => {
+    const result: { quality?: string; source?: string; size?: string; codec?: string } = {};
 
     // Extract quality (480P, 720P, 1080P, 2160P, 4K)
     const qualityMatch = text.match(/(\d{3,4})[pP]|4[kK]/i);
     if (qualityMatch) {
       result.quality = qualityMatch[0].toUpperCase().replace(/P$/i, 'p');
+    }
+
+    // Extract codec (AAC, HEVC, x264, x265, etc.)
+    const codecMatch = text.match(/\b(AAC|HEVC|x264|x265|AVC|H\.?264|H\.?265|DD5\.?1|DTS|AC3)\b/i);
+    if (codecMatch) {
+      result.codec = codecMatch[1].toUpperCase();
     }
 
     // Extract source in brackets [Gdflix], [Filepress], etc.
@@ -760,7 +767,7 @@ function extractDownloadLinks($: cheerio.CheerioAPI, baseUrl: string): { quality
       result.source = sourceMatch[1];
     }
 
-    // Extract file size (e.g., "2.21 GB", "454.12 MB", "1.04 GB")
+    // Extract file size (e.g., "2.21 GB", "454.12 MB", "1.04 GB", "957MB", "327MB")
     const sizeMatch = text.match(/(\d+(?:\.\d+)?)\s*(GB|MB|TB)/i);
     if (sizeMatch) {
       result.size = `${sizeMatch[1]} ${sizeMatch[2].toUpperCase()}`;
@@ -858,7 +865,7 @@ function extractDownloadLinks($: cheerio.CheerioAPI, baseUrl: string): { quality
     });
   };
   
-  // PRIORITY METHOD: Find download buttons with pattern "Quality [Source] Size" (e.g., "1080P [Gdflix] 2.21 GB")
+  // PRIORITY METHOD 1: Find download buttons with pattern "Quality [Source] Size" (e.g., "1080P [Gdflix] 2.21 GB")
   // This handles sites like dwo.hair, hdmovie2, etc.
   console.log("Looking for download buttons with Quality [Source] Size pattern...");
   $("a").each((_, el) => {
@@ -871,6 +878,83 @@ function extractDownloadLinks($: cheerio.CheerioAPI, baseUrl: string): { quality
     if (downloadButtonPattern.test(text)) {
       console.log(`Found download button: "${text}" -> ${href}`);
       addLink(href, text, parentText);
+    }
+  });
+
+  // PRIORITY METHOD 2: Find WorldFree4u style links "Quality Codec - Size" (e.g., "720p AAC - 957MB")
+  console.log("Looking for WorldFree4u style Quality Codec Size pattern...");
+  $("a").each((_, el) => {
+    const href = $(el).attr("href") || "";
+    const text = $(el).text().trim();
+    const parentText = $(el).parent().text().trim();
+
+    // Check if text matches pattern: Quality Codec Size (e.g., "720p AAC", "1080p HEVC")
+    // or if parent/surrounding text has this info
+    const worldfree4uPattern = /(\d{3,4})[pP]\s*(AAC|HEVC|x264|x265)/i;
+    const hasFileSize = /\d+(?:\.\d+)?\s*(GB|MB)/i.test(text + " " + parentText);
+
+    if (worldfree4uPattern.test(text + " " + parentText) && (hasFileSize || href.includes("linkos"))) {
+      console.log(`Found WorldFree4u style link: "${text}" -> ${href}`);
+      addLink(href, text, parentText);
+    }
+  });
+
+  // PRIORITY METHOD 3: Find links to known short URL services (linkos.site, etc.)
+  console.log("Looking for known short URL services...");
+  $("a").each((_, el) => {
+    const href = $(el).attr("href") || "";
+    const text = $(el).text().trim();
+    const lowerHref = href.toLowerCase();
+
+    // Check for linkos.site and similar services
+    if (lowerHref.includes("linkos.site") || lowerHref.includes("shrinkme.io") ||
+        lowerHref.includes("link.vip") || lowerHref.includes("howfly")) {
+      // For WorldFree4u style: Get quality info from previous H4 sibling
+      let parentText = $(el).parent().text().trim();
+
+      // Look for quality info in previous h4/h3/strong elements
+      const prevH4 = $(el).parent().prev("h4, h3, strong, b").text().trim();
+      const prevPrevH4 = $(el).parent().prev().prev("h4, h3, strong, b").text().trim();
+
+      // Use quality info from h4 if available
+      if (prevH4 && /\d{3,4}[pP]/.test(prevH4)) {
+        parentText = prevH4;
+      } else if (prevPrevH4 && /\d{3,4}[pP]/.test(prevPrevH4)) {
+        parentText = prevPrevH4;
+      }
+
+      console.log(`Found short URL service link: "${text}" with context "${parentText.slice(0, 50)}..." -> ${href}`);
+      addLink(href, text, parentText);
+    }
+  });
+
+  // PRIORITY METHOD 4: WorldFree4u specific - find H4 with quality then next download link
+  console.log("Looking for WorldFree4u H4 + Download Link pattern...");
+  $("h4, h3").each((_, el) => {
+    const headingText = $(el).text().trim();
+
+    // Check if heading contains quality info (480p, 720p, 1080p, etc.)
+    if (/\d{3,4}[pP]/.test(headingText)) {
+      // Look for download link in next siblings
+      let nextEl = $(el).next();
+      for (let i = 0; i < 3; i++) {
+        if (nextEl.length === 0) break;
+
+        const link = nextEl.find("a").first();
+        if (link.length) {
+          const href = link.attr("href") || "";
+          const linkText = link.text().trim();
+
+          // Check if it's a download link
+          if (href.includes("linkos") || href.includes("gdflix") || href.includes("drive.google") ||
+              linkText.toLowerCase().includes("download")) {
+            console.log(`Found WorldFree4u pattern: H4="${headingText.slice(0, 40)}..." -> ${href}`);
+            addLink(href, linkText, headingText);
+            break;
+          }
+        }
+        nextEl = nextEl.next();
+      }
     }
   });
 
@@ -938,6 +1022,9 @@ function extractDownloadLinks($: cheerio.CheerioAPI, baseUrl: string): { quality
     "technorozen", "rocklinks", "tnlinks", "runlinks", "link4m",
     "letsboost", "howifx", "earn4link", "linkvertise", "adbull",
     "links4earn", "highkeyfinance", "bindaaslinks", "link1s", "ez4short",
+    // WorldFree4u and similar sites
+    "linkos.site", "linkos", "shrinkme.io", "link.vip", "shrink.pe",
+    "myimg.click", "imgshare", "howfly", "adrinolinks", "earnlink",
   ];
   
   $("a").each((_, el) => {
@@ -1582,6 +1669,9 @@ function isDownloadUrl(url: string): boolean {
     "doodstream", "filemoon", "streamlare", "uqload", "vtube",
     "filelion", "linkbox", "terabox", "wetransfer", "480p", "720p",
     "1080p", "2160p", "4k", "dl=", "file=", "get=", "link=", "server",
+    // WorldFree4u and similar sites
+    "linkos.site", "linkos", "shrinkme.io", "link.vip", "shrink.pe",
+    "howfly", "adrinolinks", "earnlink", "gdflix", "gdtotv2",
   ];
   
   // Accept if URL has any download indicator
@@ -2109,7 +2199,10 @@ async function scrapeDownloadPage(pageUrl: string): Promise<{ quality: string; l
       "pixeldrain", "gofile", "hubcloud", "gdtot", "filepress",
       "1fichier", "uptobox", "rapidgator", "nitroflare", "uploadrar",
       "gdflix", "gdtotv2", "gdtotv", "hubdrive", "drivelinks", "drivehub",
-      "sharer", "sharerw", "instantlinks", "technorozen", "rocklinks"
+      "sharer", "sharerw", "instantlinks", "technorozen", "rocklinks",
+      // WorldFree4u style links
+      "linkos.site", "linkos", "shrinkme.io", "link.vip", "shrink.pe",
+      "howfly", "adrinolinks", "earnlink"
     ];
 
     // PRIORITY: Look for download buttons with pattern "Quality [Source] Size"

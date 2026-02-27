@@ -317,6 +317,18 @@ function discoverMovies($: cheerio.CheerioAPI, baseUrl: string, pageUrl: string)
     ".content a",
     ".main-content a",
     "#content a",
+    // WorldFree4u and similar sites
+    'a[href*="-2024"]',
+    'a[href*="-2025"]',
+    'a[href*="-2026"]',
+    'a[href*="-hdrip"]',
+    'a[href*="-webrip"]',
+    'a[href*="-web-series"]',
+    'a[href*="-season-"]',
+    'a[href*="dual-audio"]',
+    ".home-categories a",
+    ".trending a",
+    ".latest a",
   ];
 
   // Get domain to filter out external links

@@ -1,10 +1,10 @@
 import { Metadata } from "next";
-import { getSettings } from "@/lib/settings";
+import { getSiteSettings } from "@/lib/settings";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://movpix.xyz";
 
 export async function generateMetadata(): Promise<Metadata> {
-  const settings = await getSettings();
+  const settings = await getSiteSettings();
   return {
     title: `Contact Us | ${settings.siteName}`,
     description: `Contact ${settings.siteName} for DMCA takedown requests, business inquiries, or support.`,
@@ -15,7 +15,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function ContactPage() {
-  const settings = await getSettings();
+  const settings = await getSiteSettings();
   const siteName = settings.siteName || "MovPix";
 
   return (

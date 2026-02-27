@@ -1,10 +1,10 @@
 import { Metadata } from "next";
-import { getSettings } from "@/lib/settings";
+import { getSiteSettings } from "@/lib/settings";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://movpix.xyz";
 
 export async function generateMetadata(): Promise<Metadata> {
-  const settings = await getSettings();
+  const settings = await getSiteSettings();
   return {
     title: `DMCA Policy | ${settings.siteName}`,
     description: `DMCA Copyright Policy for ${settings.siteName}. Learn how to file a DMCA takedown notice.`,
@@ -15,7 +15,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function DMCAPage() {
-  const settings = await getSettings();
+  const settings = await getSiteSettings();
   const siteName = settings.siteName || "MovPix";
   const siteUrl = settings.siteUrl || SITE_URL;
   const domain = new URL(siteUrl).hostname;

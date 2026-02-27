@@ -276,103 +276,149 @@ function discoverMovies($: cheerio.CheerioAPI, baseUrl: string, pageUrl: string)
   const movies: { title: string; url: string; year?: string; posterUrl?: string }[] = [];
   const seenUrls = new Set<string>();
 
-  // Expanded movie link patterns - more aggressive
+  // IMPORTANT: Remove sidebar/widget content to avoid "sticky" movies appearing on every page
+  $(".sidebar").remove();
+  $(".widget").remove();
+  $('[class*="sidebar"]').remove();
+  $('[class*="widget"]').remove();
+  $(".trending-sidebar").remove();
+  $(".popular-sidebar").remove();
+  $(".dt_trending").remove();
+  $(".dt_popular").remove();
+  $("aside").remove();
+
+  // PRIORITY 1: Try highly specific main content selectors first (hdmovig2/WordPress themes)
+  const prioritySelectors = [
+    ".items.normal .item a[href*='/movies/']",  // hdmovig2 main grid
+    ".items .item article a",
+    "#archive-content .item a",
+    ".content .items .item a",
+    ".module .content .items article a",
+  ];
+
+  // PRIORITY 2: Standard movie selectors
   const movieSelectors = [
-    // Specific movie containers
+    // Specific movie containers (excluding sidebar)
     ".movie-item a",
     ".post-item a",
     ".film-item a",
-    ".movie a",
-    ".film a",
-    "article.post a",
-    ".entry a",
     ".content-item a",
     ".video-item a",
-    ".item a",
+    "#content .item a",
+    "main .item a",
     // List containers
     ".movies-list a",
     ".movie-list a",
     ".post-list a",
     ".film-list a",
-    ".entry-list a",
-    // Title links
-    "h2 a",
-    "h3 a",
-    "h4 a",
-    ".title a",
+    // Title links in main content
+    "main h2 a",
+    "main h3 a",
+    "#content h2 a",
+    "#content h3 a",
     ".post-title a",
     ".entry-title a",
     ".movie-title a",
-    ".film-title a",
     // URL pattern matching
     'a[href*="/movie/"]',
     'a[href*="/download/"]',
     'a[href*="/film/"]',
-    'a[href*="/release/"]',
     'a[href*="/watch/"]',
-    'a[href*="-download"]',
-    'a[href*="-full-movie"]',
-    'a[href*="-movie"]',
     // Grid/list items
     ".grid-item a",
     ".list-item a",
     ".card a",
-    ".box a",
     // WordPress patterns
-    "article a",
-    ".post a",
+    "article.post a",
     ".type-post a",
-    // Generic content links (fallback)
-    "main a",
-    ".content a",
-    ".main-content a",
-    "#content a",
-    // WorldFree4u and similar sites - image card links
+    // WorldFree4u and similar sites
     'a.cursor-pointer',
     'a.group',
     'a.block',
     'a[class*="cursor-pointer"]',
-    'a[class*="overflow-hidden"]',
-    // Year-based URL patterns
-    'a[href*="-2024"]',
-    'a[href*="-2025"]',
-    'a[href*="-2026"]',
-    'a[href*="-hdrip"]',
-    'a[href*="-webrip"]',
-    'a[href*="-web-series"]',
-    'a[href*="-season-"]',
-    'a[href*="dual-audio"]',
-    ".home-categories a",
-    ".trending a",
-    ".latest a",
+    // Year-based URL patterns (more specific)
+    'main a[href*="-2024"]',
+    'main a[href*="-2025"]',
+    'main a[href*="-2026"]',
+    '#content a[href*="-2024"]',
+    '#content a[href*="-2025"]',
+    '#content a[href*="-2026"]',
   ];
 
   // Get domain to filter out external links
   const domain = new URL(pageUrl).hostname;
 
-  // First pass: Try specific selectors
+  // Helper to extract movie from element
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const extractMovieFromElement = (el: any): { title: string; url: string; year?: string; posterUrl?: string } | null => {
+    const href = $(el).attr("href") || "";
+    let title = $(el).attr("title") ||
+                $(el).attr("alt") ||
+                $(el).find("img").attr("alt") ||
+                $(el).find(".title").text().trim() ||
+                $(el).text().trim();
+
+    if (!href || seenUrls.has(href)) return null;
+    if (href.startsWith("#") || href.startsWith("javascript:") || href.startsWith("mailto:")) return null;
+
+    let fullUrl = href;
+    if (!href.startsWith("http")) {
+      fullUrl = href.startsWith("/") ? baseUrl + href : baseUrl + "/" + href;
+    }
+
+    try {
+      const linkDomain = new URL(fullUrl).hostname;
+      if (linkDomain !== domain) return null;
+    } catch { return null; }
+
+    // Must be a movie URL
+    if (!fullUrl.includes("/movies/") && !fullUrl.includes("/movie/") && !fullUrl.includes("/download/") && !fullUrl.includes("/watch/") && !fullUrl.includes("/film/")) {
+      return null;
+    }
+
+    const year = extractYearFromUrl(fullUrl);
+    const poster = $(el).find("img").attr("src") || $(el).find("img").attr("data-src");
+    title = title || fullUrl.split("/").filter(Boolean).pop()?.replace(/-/g, " ") || "";
+    seenUrls.add(href);
+
+    return { title: title.slice(0, 200), url: fullUrl, year: year?.toString(), posterUrl: poster };
+  };
+
+  // PRIORITY PASS: Try main content selectors first (excludes sidebar which was already removed)
+  for (const selector of prioritySelectors) {
+    try {
+      $(selector).each((_, el) => {
+        const movie = extractMovieFromElement(el);
+        if (movie && movies.length < 200) movies.push(movie);
+      });
+    } catch {}
+  }
+
+  // If priority selectors found enough movies, return them
+  if (movies.length >= 10) {
+    console.log(`Discovered ${movies.length} movies from ${pageUrl} using priority selectors`);
+    return movies;
+  }
+
+  // FALLBACK: Try standard selectors
   for (const selector of movieSelectors) {
     try {
       $(selector).each((_, el) => {
         const href = $(el).attr("href") || "";
-        // Get title from multiple sources - including child img alt attribute
         let title = $(el).attr("title") ||
                     $(el).attr("alt") ||
-                    $(el).find("img").attr("alt") ||  // WorldFree4u style - title in child img alt
+                    $(el).find("img").attr("alt") ||
                     $(el).find(".title").text().trim() ||
                     $(el).text().trim();
-        
-        // Skip empty, external, or already seen
+
         if (!href || seenUrls.has(href)) return;
         if (href.startsWith("#") || href.startsWith("javascript:") || href.startsWith("mailto:")) return;
-        
-        // Make absolute URL
+
         let fullUrl = href;
         if (!href.startsWith("http")) {
           fullUrl = href.startsWith("/") ? baseUrl + href : baseUrl + "/" + href;
         }
-        
-        // Check if it's same domain
+
         try {
           const linkDomain = new URL(fullUrl).hostname;
           if (linkDomain !== domain) return;

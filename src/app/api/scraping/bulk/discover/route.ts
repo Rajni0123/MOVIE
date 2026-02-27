@@ -378,7 +378,8 @@ function discoverMovies($: cheerio.CheerioAPI, baseUrl: string, pageUrl: string)
           /\/tag\//i,
           /\/author\//i,
           /\/search/i,
-          /\/page\/\d+$/i, // Skip pagination links themselves
+          /\/page\/\d+\/?$/i, // Skip pagination links (with or without trailing slash)
+          /\/page\/\d+\/?(?:\?|#|$)/i, // Also catch pagination with query strings
           /\/genre\//i,
           /\/archive\//i,
           /\?s=/i, // Search queries
@@ -599,7 +600,8 @@ function discoverMovies($: cheerio.CheerioAPI, baseUrl: string, pageUrl: string)
         /\/tag\//i,
         /\/author\//i,
         /\/search/i,
-        /\/page\/\d+$/i,
+        /\/page\/\d+\/?$/i, // Skip pagination links (with or without trailing slash)
+        /\/page\/\d+\/?(?:\?|#|$)/i, // Also catch pagination with query strings
         /\/genre\//i,
         /\?s=/i,
         /wp-login/i,

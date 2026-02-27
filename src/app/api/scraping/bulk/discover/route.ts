@@ -103,55 +103,52 @@ export async function POST(request: NextRequest) {
       }
       console.log(`Total movies discovered (before year filter): ${allMovies.length}`);
       
-      // Filter movies by year if year is specified in URL - STRICT FILTERING
+      // Year filtering - RELAXED for better results
+      // If user is browsing a year/release page, trust that the website shows relevant content
+      // Only filter if explicitly requested via query param, not just from URL path
       let movies = allMovies;
-      if (yearFromUrl) {
+
+      // Check if this is a release/year page (trust the website's categorization)
+      const isYearReleasePage = url.match(/\/release\/\d{4}|\/year\/\d{4}|\/movies\/\d{4}/i);
+
+      if (yearFromUrl && !isYearReleasePage) {
+        // Only apply strict year filter for non-year pages (like search results)
         movies = allMovies.filter(movie => {
-          // Priority 1: Check year in movie URL (most reliable)
+          // Check year in movie URL
           const movieYearFromUrl = extractYearFromUrl(movie.url);
           if (movieYearFromUrl && movieYearFromUrl === yearFromUrl) {
             return true;
           }
-          
-          // Priority 2: Check year field if available
+
+          // Check year field
           if (movie.year) {
             const movieYear = parseInt(movie.year);
             if (movieYear === yearFromUrl) {
               return true;
             }
           }
-          
-          // Priority 3: Check year in title (less reliable, but check)
-          // Only match if year is clearly in parentheses or at the end
+
+          // Check year in title
           const titleYearPatterns = [
-            new RegExp(`\\(${yearFromUrl}\\)`, 'i'),  // (2025)
-            new RegExp(`\\[${yearFromUrl}\\]`, 'i'),  // [2025]
-            new RegExp(`\\s${yearFromUrl}\\s`, 'i'),  // space 2025 space
-            new RegExp(`\\s${yearFromUrl}$`, 'i'),    // space 2025 at end
-            new RegExp(`^${yearFromUrl}\\s`, 'i'),    // 2025 space at start
+            new RegExp(`\\(${yearFromUrl}\\)`, 'i'),
+            new RegExp(`\\[${yearFromUrl}\\]`, 'i'),
+            new RegExp(`-${yearFromUrl}[-/]`, 'i'),
           ];
-          
+
           for (const pattern of titleYearPatterns) {
-            if (pattern.test(movie.title)) {
+            if (pattern.test(movie.title) || pattern.test(movie.url)) {
               return true;
             }
           }
-          
-          // If no clear match, exclude it (strict filtering)
+
           return false;
         });
-        
-        console.log(`✅ Strict year filter ${yearFromUrl}: ${allMovies.length} total -> ${movies.length} matching movies`);
-        
-        // Warn if many movies were filtered out
-        if (allMovies.length > 0 && movies.length === 0) {
-          console.warn(`⚠️ Warning: Year filter ${yearFromUrl} filtered out ALL ${allMovies.length} movies. This might mean:`);
-          console.warn(`  1. Movies on this page don't have ${yearFromUrl} in their URL/title`);
-          console.warn(`  2. The page structure is different than expected`);
-          console.warn(`  3. Try checking the page manually to see movie URLs`);
-        } else if (allMovies.length > movies.length) {
-          console.log(`   Filtered out ${allMovies.length - movies.length} movies that don't match year ${yearFromUrl}`);
-        }
+
+        console.log(`Year filter ${yearFromUrl}: ${allMovies.length} total -> ${movies.length} matching`);
+      } else if (yearFromUrl && isYearReleasePage) {
+        // For year/release pages, trust the website and include all movies
+        console.log(`📅 Year release page detected - including all ${allMovies.length} movies (trusting website categorization)`);
+        movies = allMovies;
       }
       
       // Note: Genre filtering is handled by the website itself (genre pages show genre-specific movies)

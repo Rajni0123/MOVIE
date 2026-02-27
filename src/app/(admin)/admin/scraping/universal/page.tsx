@@ -140,16 +140,33 @@ export default function UniversalScraperPage() {
     let hasMore = true;
     let consecutiveEmpty = 0;
     const maxPages = 1000; // Safety limit
-    const maxConsecutiveEmpty = 3; // Stop after 3 empty pages
+    const maxConsecutiveEmpty = 5; // Stop after 5 empty pages (increased for reliability)
+    let lastMovieCount = 0; // Track if we're getting new movies
+
+    // Detect if URL is a genre/category page
+    const isGenrePage = /\/genre\/[^\/]+\/?$/i.test(targetUrl) ||
+                        /\/category\/[^\/]+\/?$/i.test(targetUrl) ||
+                        /\/tag\/[^\/]+\/?$/i.test(targetUrl);
+
+    console.log(`Starting discovery: ${targetUrl}, isGenrePage: ${isGenrePage}, maxCount: ${maxCount}`);
 
     try {
       while (hasMore && page <= maxPages && consecutiveEmpty < maxConsecutiveEmpty) {
-        // Build pagination URL - try multiple patterns
+        // Build pagination URL - handle different patterns
         let pageUrl = targetUrl;
         if (page > 1) {
-          const baseUrl = targetUrl.split("?")[0].replace(/\/page\/\d+.*$/, "").replace(/\/$/, "");
+          // Clean the base URL - remove any existing page patterns
+          const baseUrl = targetUrl
+            .split("?")[0]
+            .replace(/\/page\/\d+\/?$/i, "")
+            .replace(/\/page-\d+\/?$/i, "")
+            .replace(/\/$/, "");
+
+          // Build the page URL
           pageUrl = `${baseUrl}/page/${page}/`;
         }
+
+        console.log(`Fetching page ${page}: ${pageUrl}`);
 
         setSuccess(`Discovering page ${page}... Found ${allMovies.length} movies so far`);
 
@@ -161,50 +178,63 @@ export default function UniversalScraperPage() {
         });
         const data = await res.json();
 
-        if (data.success && data.movies?.length > 0) {
-          consecutiveEmpty = 0; // Reset counter
+        console.log(`Page ${page} response: success=${data.success}, movies=${data.movies?.length || 0}`);
 
-          // Filter duplicates
+        if (data.success && data.movies?.length > 0) {
+          // Filter duplicates by URL
           const newMovies = data.movies.filter((m: DiscoveredMovie) => {
             if (seenUrls.has(m.url)) return false;
             seenUrls.add(m.url);
             return true;
           });
 
+          console.log(`Page ${page}: ${data.movies.length} total, ${newMovies.length} new unique`);
+
           if (newMovies.length > 0) {
+            consecutiveEmpty = 0; // Reset counter only if we got new movies
             allMovies.push(...newMovies);
             setDiscoveredMovies([...allMovies]);
             setTotalDiscovered(allMovies.length);
+            lastMovieCount = allMovies.length;
           } else {
+            // Got movies but all were duplicates - pagination might be broken
             consecutiveEmpty++;
+            console.log(`Page ${page}: All ${data.movies.length} movies were duplicates (consecutive empty: ${consecutiveEmpty})`);
           }
 
           // Check if we've reached the target count
           if (maxCount && allMovies.length >= maxCount) {
+            console.log(`Reached target count: ${allMovies.length} >= ${maxCount}`);
             break;
           }
 
-          // Always try next page unless we get clear signal to stop
+          // Continue to next page
           page++;
           // Small delay to avoid rate limiting
-          await new Promise(resolve => setTimeout(resolve, 200));
+          await new Promise(resolve => setTimeout(resolve, 300));
         } else {
-          // No movies found - try alternative pagination patterns
+          // No movies found on this page
+          console.log(`Page ${page}: No movies found (error: ${data.error})`);
+
           if (page === 1) {
-            // First page failed completely
+            // First page failed completely - try different URL patterns
+            console.log("First page failed, stopping");
             hasMore = false;
           } else {
             consecutiveEmpty++;
             if (consecutiveEmpty < maxConsecutiveEmpty) {
               // Try next page anyway
               page++;
-              await new Promise(resolve => setTimeout(resolve, 200));
+              await new Promise(resolve => setTimeout(resolve, 300));
             } else {
+              console.log(`Stopping: ${maxConsecutiveEmpty} consecutive empty pages`);
               hasMore = false;
             }
           }
         }
       }
+
+      console.log(`Discovery finished: ${allMovies.length} movies from ${page - 1} pages`);
 
       setSuccess(`Discovery complete! Found ${allMovies.length} movies from ${page - 1} pages`);
       return allMovies;

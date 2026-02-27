@@ -82,7 +82,7 @@ export function DownloadLinks({ links, movieTitle = "" }: DownloadLinksProps) {
     excludeDomains: [],
   });
   const [siteSettings, setSiteSettings] = useState<SiteSettings>({
-    siteName: "MovieHub",
+    siteName: "MovPix",
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

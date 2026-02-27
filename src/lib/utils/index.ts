@@ -60,7 +60,7 @@ export function generateMetaDescription(description: string, maxLength = 155): s
  */
 export function generateMetaTitle(title: string, year?: number | string): string {
   const yearStr = year ? ` (${year})` : "";
-  return `Download ${title}${yearStr} - Full Movie | MovieHub`;
+  return `Download ${title}${yearStr} - Full Movie | MovPix`;
 }
 
 /**

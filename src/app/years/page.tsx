@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 const currentYear = new Date().getFullYear();
 
 export const metadata = {
-  title: "Browse Movies by Year - Download HD Movies | MovieHub",
+  title: "Browse Movies by Year - Download HD Movies | MovPix",
   description: `Browse and download movies by release year. Find movies from 1980 to ${currentYear} for free in HD quality (480p, 720p, 1080p).`,
   keywords: `movies by year, ${currentYear} movies, ${currentYear - 1} movies, yearly movies, movie archive, download movies by year, HD movies by year`,
 };

@@ -3,11 +3,11 @@ import prisma from "@/lib/db/prisma";
 
 // Default settings
 const DEFAULT_SETTINGS: Record<string, string> = {
-  siteName: "MovieHub",
+  siteName: "MovPix",
   siteUrl: "https://moviehub.com",
   siteDescription: "Download latest movies in HD quality - 480p, 720p, 1080p",
   logoType: "text",
-  logoText: "MovieHub",
+  logoText: "MovPix",
   logoUrl: "",
   logoIcon: "Film",
   faviconUrl: "/favicon.ico",
@@ -15,7 +15,7 @@ const DEFAULT_SETTINGS: Record<string, string> = {
   twitterUrl: "",
   facebookUrl: "",
   instagramUrl: "",
-  footerText: "© 2024 MovieHub. All rights reserved.",
+  footerText: "© 2024 MovPix. All rights reserved.",
 };
 
 // GET /api/settings - Get public site settings (no auth required)

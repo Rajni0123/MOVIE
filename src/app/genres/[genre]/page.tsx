@@ -39,7 +39,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const genreName = genreMap[genreSlug] || genreSlug;
   
   return {
-    title: `${genreName} Movies - Download Free HD Movies | MovieHub`,
+    title: `${genreName} Movies - Download Free HD Movies | MovPix`,
     description: `Browse and download ${genreName} movies for free in HD quality (480p, 720p, 1080p). Find the best ${genreName} movies.`,
     keywords: `${genreName} movies, ${genreName} movies download, ${genreName} films, best ${genreName} movies, ${genreName} movies HD`,
   };

@@ -1,9 +1,9 @@
 export const SEO_CONFIG = {
-  siteName: process.env.NEXT_PUBLIC_SITE_NAME || "MovieHub",
+  siteName: process.env.NEXT_PUBLIC_SITE_NAME || "MovPix",
   siteUrl: process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000",
   
   // Default meta tags
-  defaultTitle: "MovieHub - Download Movies Free",
+  defaultTitle: "MovPix - Download Movies Free",
   defaultDescription: "Discover and download the latest movies for free. Browse our collection of movies with high-quality download links.",
   
   // Open Graph defaults

@@ -65,17 +65,17 @@ const DEFAULT_GENRE_LINKS: FooterLink[] = [
 export function Footer() {
   const currentYear = new Date().getFullYear();
   const [settings, setSettings] = useState<FooterSettings>({
-    siteName: "MovieHub",
+    siteName: "MovPix",
     siteDescription: "Discover and download movies for free. Browse our collection of movies with high-quality download links.",
     logoType: "text",
-    logoText: "MovieHub",
+    logoText: "MovPix",
     logoUrl: "",
     logoIcon: "Film",
     telegramUrl: "",
     twitterUrl: "",
     facebookUrl: "",
     instagramUrl: "",
-    footerText: `© ${currentYear} MovieHub. All rights reserved.`,
+    footerText: `© ${currentYear} MovPix. All rights reserved.`,
   });
 
   const [footerLinks, setFooterLinks] = useState<FooterLinks>({

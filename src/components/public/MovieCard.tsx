@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Star } from "lucide-react";
+import { Star, Play } from "lucide-react";
 import { Movie } from "@prisma/client";
 
 interface MovieCardProps {
@@ -54,8 +54,14 @@ export function MovieCard({ movie }: MovieCardProps) {
             </div>
           )}
 
-          {/* Hover Overlay */}
-          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
+          {/* Hover Overlay with Play Icon */}
+          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-all duration-300 flex items-center justify-center">
+            <div className="opacity-0 group-hover:opacity-100 transform scale-50 group-hover:scale-100 transition-all duration-300">
+              <div className="bg-primary/90 rounded-full p-3 md:p-4 shadow-lg">
+                <Play className="h-6 w-6 md:h-8 md:w-8 text-white fill-white" />
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Info */}

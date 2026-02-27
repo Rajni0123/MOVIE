@@ -36,7 +36,7 @@ interface SEOStats {
 
 export default function SEOPage() {
   const [settings, setSettings] = useState<SiteSettings>({
-    siteName: "MovieHub",
+    siteName: "MovPix",
     siteDescription: "Download latest movies in HD quality - 480p, 720p, 1080p. Free movie downloads with fast links.",
     siteKeywords: "movie download, free movies, HD movies, 480p movies, 720p movies, 1080p movies, Hindi movies, English movies",
     googleAnalyticsId: "",
@@ -218,7 +218,7 @@ export default function SEOPage() {
                 <Input
                   value={settings.siteName}
                   onChange={(e) => setSettings({ ...settings, siteName: e.target.value })}
-                  placeholder="MovieHub"
+                  placeholder="MovPix"
                 />
               </div>
 

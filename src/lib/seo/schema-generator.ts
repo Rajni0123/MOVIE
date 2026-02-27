@@ -86,7 +86,7 @@ export function generateWebsiteSchema() {
   return {
     "@context": "https://schema.org",
     "@type": "WebSite",
-    name: process.env.NEXT_PUBLIC_SITE_NAME || "MovieHub",
+    name: process.env.NEXT_PUBLIC_SITE_NAME || "MovPix",
     url: SITE_URL,
     potentialAction: {
       "@type": "SearchAction",
@@ -124,7 +124,7 @@ export function generateOrganizationSchema() {
   return {
     "@context": "https://schema.org",
     "@type": "Organization",
-    name: process.env.NEXT_PUBLIC_SITE_NAME || "MovieHub",
+    name: process.env.NEXT_PUBLIC_SITE_NAME || "MovPix",
     url: SITE_URL,
     logo: `${SITE_URL}/logo.png`,
   };

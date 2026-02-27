@@ -7,7 +7,7 @@ import { Layers } from "lucide-react";
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: "Browse Movies by Genre - MovieHub",
+  title: "Browse Movies by Genre - MovPix",
   description: "Browse and download movies by genre. Find Action, Comedy, Drama, Horror, Romance, Thriller, Sci-Fi, Fantasy, Animation movies for free in HD quality.",
   keywords: "movie genres, action movies, comedy movies, drama movies, horror movies, download movies by genre",
 };

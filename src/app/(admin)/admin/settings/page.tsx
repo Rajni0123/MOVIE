@@ -75,11 +75,11 @@ export default function SettingsPage() {
   const [adminEmail, setAdminEmail] = useState("");
 
   const [settings, setSettings] = useState<SiteSettings>({
-    siteName: "MovieHub",
+    siteName: "MovPix",
     siteUrl: "https://moviehub.com",
     siteDescription: "Download latest movies in HD quality",
     logoType: "text",
-    logoText: "MovieHub",
+    logoText: "MovPix",
     logoUrl: "",
     logoIcon: "Film",
     faviconUrl: "/favicon.ico",
@@ -88,7 +88,7 @@ export default function SettingsPage() {
     facebookUrl: "",
     instagramUrl: "",
     googleAnalyticsId: "",
-    footerText: "© 2024 MovieHub. All rights reserved.",
+    footerText: "© 2024 MovPix. All rights reserved.",
     // Link Monetization
     linkMonetizationEnabled: false,
     linkMonetizationUrl: "",
@@ -376,7 +376,7 @@ export default function SettingsPage() {
                     <Input
                       value={settings.siteName}
                       onChange={(e) => setSettings({ ...settings, siteName: e.target.value })}
-                      placeholder="MovieHub"
+                      placeholder="MovPix"
                     />
                     <p className="mt-1 text-xs text-muted-foreground">
                       This name appears in browser tabs, headers, and meta tags
@@ -415,7 +415,7 @@ export default function SettingsPage() {
                     <Input
                       value={settings.footerText}
                       onChange={(e) => setSettings({ ...settings, footerText: e.target.value })}
-                      placeholder="© 2024 MovieHub. All rights reserved."
+                      placeholder="© 2024 MovPix. All rights reserved."
                     />
                   </div>
                 </CardContent>
@@ -476,7 +476,7 @@ export default function SettingsPage() {
                           placeholder="Enter your logo name"
                         />
                         <p className="mt-1 text-xs text-muted-foreground">
-                          Custom text to display as logo (e.g., MovieHub, FilmZone, etc.)
+                          Custom text to display as logo (e.g., MovPix, FilmZone, etc.)
                         </p>
                       </div>
 

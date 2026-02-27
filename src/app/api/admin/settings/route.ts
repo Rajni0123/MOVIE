@@ -5,12 +5,12 @@ import { clearSettingsCache } from "@/lib/settings";
 
 // Default settings
 const DEFAULT_SETTINGS: Record<string, string> = {
-  siteName: "MovieHub",
+  siteName: "MovPix",
   siteUrl: "https://moviehub.com",
   siteDescription: "Download latest movies in HD quality - 480p, 720p, 1080p",
   siteKeywords: "movie download, free movies, HD movies, 480p movies, 720p movies, 1080p movies",
   logoType: "text",
-  logoText: "MovieHub",
+  logoText: "MovPix",
   logoUrl: "",
   logoIcon: "Film",
   faviconUrl: "/favicon.ico",
@@ -20,7 +20,7 @@ const DEFAULT_SETTINGS: Record<string, string> = {
   instagramUrl: "",
   googleAnalyticsId: "",
   googleSearchConsoleId: "",
-  footerText: "© 2024 MovieHub. All rights reserved.",
+  footerText: "© 2024 MovPix. All rights reserved.",
   // Link Monetization
   linkMonetizationEnabled: "false",
   linkMonetizationUrl: "",

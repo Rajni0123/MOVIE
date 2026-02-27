@@ -2,7 +2,7 @@ import { Metadata } from "next";
 import { Movie } from "@prisma/client";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
-const SITE_NAME = process.env.NEXT_PUBLIC_SITE_NAME || "MovieHub";
+const SITE_NAME = process.env.NEXT_PUBLIC_SITE_NAME || "MovPix";
 
 /**
  * Generate dynamic SEO keywords for a movie

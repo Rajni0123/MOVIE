@@ -286,7 +286,7 @@ async function main() {
     await prisma.notification.createMany({
       data: [
         {
-          title: "🎬 Welcome to MovieHub!",
+          title: "🎬 Welcome to MovPix!",
           message: "Download your favorite movies in HD quality. Join our Telegram for latest updates!",
           type: "info",
           linkUrl: "https://t.me/moviehub",

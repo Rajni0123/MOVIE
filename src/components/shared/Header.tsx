@@ -28,9 +28,9 @@ export function Header() {
   const [search, setSearch] = useState("");
   const [showSearch, setShowSearch] = useState(false);
   const [settings, setSettings] = useState<SiteSettings>({
-    siteName: "MovieHub",
+    siteName: "MovPix",
     logoType: "text",
-    logoText: "MovieHub",
+    logoText: "MovPix",
     logoUrl: "",
     logoIcon: "Film",
   });

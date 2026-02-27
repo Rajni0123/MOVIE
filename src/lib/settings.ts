@@ -16,7 +16,7 @@ export interface SiteSettings {
 }
 
 const DEFAULT_SETTINGS: SiteSettings = {
-  siteName: "MovieHub",
+  siteName: "MovPix",
   siteUrl: process.env.NEXT_PUBLIC_SITE_URL || "https://moviehub.com",
   siteDescription: "Download latest movies in HD quality - 480p, 720p, 1080p",
   logoUrl: "/logo.png",
@@ -26,7 +26,7 @@ const DEFAULT_SETTINGS: SiteSettings = {
   facebookUrl: "",
   instagramUrl: "",
   googleAnalyticsId: "",
-  footerText: "© 2024 MovieHub. All rights reserved.",
+  footerText: "© 2024 MovPix. All rights reserved.",
 };
 
 // Cache settings in memory for 5 minutes

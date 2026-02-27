@@ -718,10 +718,10 @@ function extractScreenshots($: cheerio.CheerioAPI, baseUrl: string): string[] {
   return screenshots.slice(0, 15);
 }
 
-function extractDownloadLinks($: cheerio.CheerioAPI, baseUrl: string): { quality: string; language: string; url: string }[] {
-  const links: { quality: string; language: string; url: string }[] = [];
+function extractDownloadLinks($: cheerio.CheerioAPI, baseUrl: string): { quality: string; language: string; url: string; size?: string; source?: string }[] {
+  const links: { quality: string; language: string; url: string; size?: string; source?: string }[] = [];
   const seenUrls = new Set<string>();
-  
+
   // Get the source website domain - NEVER add links from this domain
   let sourceDomain = "";
   try {
@@ -729,28 +729,53 @@ function extractDownloadLinks($: cheerio.CheerioAPI, baseUrl: string): { quality
   } catch {
     sourceDomain = "";
   }
-  
+
   // Helper to check if URL is from source website (should be excluded)
   const isSourceWebsiteUrl = (url: string): boolean => {
     if (!sourceDomain) return false;
     try {
       const urlDomain = new URL(url).hostname.toLowerCase();
       // Check if it's the same domain or subdomain
-      return urlDomain === sourceDomain || 
+      return urlDomain === sourceDomain ||
              urlDomain.endsWith("." + sourceDomain) ||
              sourceDomain.endsWith("." + urlDomain);
     } catch {
       return false;
     }
   };
-  
+
+  // Helper to extract quality, source, and size from button text like "1080P [Gdflix] 2.21 GB"
+  const parseButtonText = (text: string): { quality?: string; source?: string; size?: string } => {
+    const result: { quality?: string; source?: string; size?: string } = {};
+
+    // Extract quality (480P, 720P, 1080P, 2160P, 4K)
+    const qualityMatch = text.match(/(\d{3,4})[pP]|4[kK]/i);
+    if (qualityMatch) {
+      result.quality = qualityMatch[0].toUpperCase().replace(/P$/i, 'p');
+    }
+
+    // Extract source in brackets [Gdflix], [Filepress], etc.
+    const sourceMatch = text.match(/\[([^\]]+)\]/);
+    if (sourceMatch) {
+      result.source = sourceMatch[1];
+    }
+
+    // Extract file size (e.g., "2.21 GB", "454.12 MB", "1.04 GB")
+    const sizeMatch = text.match(/(\d+(?:\.\d+)?)\s*(GB|MB|TB)/i);
+    if (sizeMatch) {
+      result.size = `${sizeMatch[1]} ${sizeMatch[2].toUpperCase()}`;
+    }
+
+    return result;
+  };
+
   // Helper to add a link
   const addLink = (href: string, text: string, parentText: string) => {
     if (!href) return;
-    
+
     // CRITICAL: Clean the URL first - remove leading/trailing spaces
     let cleanHref = href.trim();
-    
+
     // Check if href contains multiple URLs (space-separated) - take only the actual download link
     if (cleanHref.includes(" http")) {
       // Split by space and find the actual download URL (not the source site)
@@ -763,7 +788,7 @@ function extractDownloadLinks($: cheerio.CheerioAPI, baseUrl: string): { quality
         cleanHref = urls[0];
       }
     }
-    
+
     // Also handle case where URL has space at the start
     if (cleanHref.includes(" ")) {
       // Try to extract the http URL part
@@ -772,24 +797,24 @@ function extractDownloadLinks($: cheerio.CheerioAPI, baseUrl: string): { quality
         cleanHref = httpMatch[1];
       }
     }
-    
+
     if (!cleanHref || seenUrls.has(cleanHref)) return;
     if (cleanHref.startsWith("#") || cleanHref.startsWith("javascript:")) return;
-    
+
     // CRITICAL: NEVER add source website URLs as download links
     // This prevents adding other movie page URLs from the same site
     if (cleanHref.startsWith("http") && isSourceWebsiteUrl(cleanHref)) {
       return; // Skip - this is from the source website, not a download link
     }
-    
+
     // Also skip relative URLs that would resolve to source website
     if (!cleanHref.startsWith("http")) {
       return; // Skip relative URLs - they're from the source site
     }
-    
+
     const lowerHref = cleanHref.toLowerCase();
     const combinedText = (text + " " + parentText).toLowerCase();
-    
+
     // Skip social/nav links
     const skipPatterns = [
       "facebook.com", "twitter.com", "instagram.com", "youtube.com",
@@ -798,16 +823,21 @@ function extractDownloadLinks($: cheerio.CheerioAPI, baseUrl: string): { quality
       "javascript:", "mailto:", "tel:", "/search", "?s=",
     ];
     if (skipPatterns.some(p => lowerHref.includes(p))) return;
-    
+
     seenUrls.add(cleanHref);
-    
+
+    // Parse button text for quality, source, and size
+    const parsed = parseButtonText(text + " " + parentText);
+
     // Detect quality
-    let quality = "720p";
-    if (combinedText.includes("480") || lowerHref.includes("480")) quality = "480p";
-    else if (combinedText.includes("1080") || lowerHref.includes("1080")) quality = "1080p";
-    else if (combinedText.includes("2160") || combinedText.includes("4k") || lowerHref.includes("2160") || lowerHref.includes("4k")) quality = "4K";
-    else if (combinedText.includes("720") || lowerHref.includes("720")) quality = "720p";
-    else if (combinedText.includes("hdrip") || combinedText.includes("webrip") || combinedText.includes("bluray")) quality = "720p";
+    let quality = parsed.quality || "720p";
+    if (!parsed.quality) {
+      if (combinedText.includes("480") || lowerHref.includes("480")) quality = "480p";
+      else if (combinedText.includes("1080") || lowerHref.includes("1080")) quality = "1080p";
+      else if (combinedText.includes("2160") || combinedText.includes("4k") || lowerHref.includes("2160") || lowerHref.includes("4k")) quality = "4K";
+      else if (combinedText.includes("720") || lowerHref.includes("720")) quality = "720p";
+      else if (combinedText.includes("hdrip") || combinedText.includes("webrip") || combinedText.includes("bluray")) quality = "720p";
+    }
 
     // Detect language
     let language = "Hindi";
@@ -823,9 +853,46 @@ function extractDownloadLinks($: cheerio.CheerioAPI, baseUrl: string): { quality
       quality,
       language,
       url: makeAbsoluteUrl(cleanHref, baseUrl),
+      size: parsed.size,
+      source: parsed.source,
     });
   };
   
+  // PRIORITY METHOD: Find download buttons with pattern "Quality [Source] Size" (e.g., "1080P [Gdflix] 2.21 GB")
+  // This handles sites like dwo.hair, hdmovie2, etc.
+  console.log("Looking for download buttons with Quality [Source] Size pattern...");
+  $("a").each((_, el) => {
+    const href = $(el).attr("href") || "";
+    const text = $(el).text().trim();
+    const parentText = $(el).parent().text().trim();
+
+    // Check if text matches the pattern: Quality [Source] Size (e.g., "1080P [Gdflix] 2.21 GB")
+    const downloadButtonPattern = /(\d{3,4})[pP]\s*\[[^\]]+\]\s*\d+(?:\.\d+)?\s*(GB|MB)/i;
+    if (downloadButtonPattern.test(text)) {
+      console.log(`Found download button: "${text}" -> ${href}`);
+      addLink(href, text, parentText);
+    }
+  });
+
+  // Also look for styled download buttons/links with file size
+  $("a").each((_, el) => {
+    const href = $(el).attr("href") || "";
+    const text = $(el).text().trim();
+    const parentText = $(el).parent().text().trim();
+    const style = $(el).attr("style") || "";
+    const className = $(el).attr("class") || "";
+
+    // Check if it's a styled button (has background color or specific classes) with file size
+    const hasButtonStyle = style.includes("background") || className.includes("btn") || className.includes("button") || className.includes("download");
+    const hasFileSize = /\d+(?:\.\d+)?\s*(GB|MB)/i.test(text);
+    const hasQuality = /(\d{3,4})[pP]|4[kK]/i.test(text);
+
+    if ((hasButtonStyle || hasFileSize) && (hasQuality || hasFileSize)) {
+      console.log(`Found styled download button: "${text}" -> ${href}`);
+      addLink(href, text, parentText);
+    }
+  });
+
   // AGGRESSIVE METHOD 1: Find ALL links with download-related text content
   $("a").each((_, el) => {
     const href = $(el).attr("href") || "";
@@ -835,15 +902,16 @@ function extractDownloadLinks($: cheerio.CheerioAPI, baseUrl: string): { quality
     const parentClass = $(el).parent().attr("class") || "";
     const parentText = $(el).parent().text().trim();
     const combinedText = (text + " " + title + " " + className + " " + parentClass).toLowerCase();
-    
+
     // Check if text/class indicates download
     const downloadKeywords = [
       "download", "descargar", "telecharger", "480p", "720p", "1080p", "2160p", "4k",
       "hdrip", "webrip", "bluray", "brrip", "dvdrip", "hdtv", "webdl", "web-dl",
       "direct link", "g-drive", "gdrive", "google drive", "mediafire", "mega",
-      "fast download", "slow download", "server", "link", "mirror"
+      "fast download", "slow download", "server", "link", "mirror",
+      "gdflix", "gdtot", "filepress", "hubcloud", "gdtotv2"
     ];
-    
+
     if (downloadKeywords.some(kw => combinedText.includes(kw))) {
       addLink(href, text, parentText);
     }
@@ -864,6 +932,12 @@ function extractDownloadLinks($: cheerio.CheerioAPI, baseUrl: string): { quality
     "doodstream", "filemoon", "streamlare", "uqload", "vtube",
     "filelion", "linkbox", "terabox", "wetransfer", "gplinks",
     "shrinkme", "exe.io", "ouo.io", "sharer.pw", "shorte.st",
+    // Additional popular hosts for Hindi movie sites
+    "gdflix", "gdtotv2", "gdtotv", "gdtot", "hubdrive", "drivelinks",
+    "drivehub", "drivebot", "sharer", "sharerw", "instantlinks",
+    "technorozen", "rocklinks", "tnlinks", "runlinks", "link4m",
+    "letsboost", "howifx", "earn4link", "linkvertise", "adbull",
+    "links4earn", "highkeyfinance", "bindaaslinks", "link1s", "ez4short",
   ];
   
   $("a").each((_, el) => {
@@ -2033,28 +2107,63 @@ async function scrapeDownloadPage(pageUrl: string): Promise<{ quality: string; l
     const downloadHosts = [
       "drive.google", "mediafire", "mega.nz", "mega.co", "dropbox",
       "pixeldrain", "gofile", "hubcloud", "gdtot", "filepress",
-      "1fichier", "uptobox", "rapidgator", "nitroflare", "uploadrar"
+      "1fichier", "uptobox", "rapidgator", "nitroflare", "uploadrar",
+      "gdflix", "gdtotv2", "gdtotv", "hubdrive", "drivelinks", "drivehub",
+      "sharer", "sharerw", "instantlinks", "technorozen", "rocklinks"
     ];
-    
+
+    // PRIORITY: Look for download buttons with pattern "Quality [Source] Size"
+    console.log("Scanning download page for Quality [Source] Size pattern...");
+    $("a").each((_, el) => {
+      const href = $(el).attr("href") || "";
+      const text = $(el).text().trim();
+      const parentText = $(el).parent().text().trim();
+
+      // Check if text matches the pattern: Quality [Source] Size (e.g., "1080P [Gdflix] 2.21 GB")
+      const downloadButtonPattern = /(\d{3,4})[pP]\s*\[[^\]]+\]\s*\d+(?:\.\d+)?\s*(GB|MB)/i;
+      if (downloadButtonPattern.test(text)) {
+        console.log(`[Download Page] Found download button: "${text}" -> ${href}`);
+        addLink(href, text, parentText);
+      }
+    });
+
+    // Also look for styled download buttons/links with file size
+    $("a").each((_, el) => {
+      const href = $(el).attr("href") || "";
+      const text = $(el).text().trim();
+      const parentText = $(el).parent().text().trim();
+      const style = $(el).attr("style") || "";
+      const className = $(el).attr("class") || "";
+
+      const hasButtonStyle = style.includes("background") || className.includes("btn") || className.includes("button");
+      const hasFileSize = /\d+(?:\.\d+)?\s*(GB|MB)/i.test(text);
+      const hasQuality = /(\d{3,4})[pP]|4[kK]/i.test(text);
+
+      if ((hasButtonStyle || hasFileSize) && (hasQuality || hasFileSize)) {
+        console.log(`[Download Page] Found styled button: "${text}" -> ${href}`);
+        addLink(href, text, parentText);
+      }
+    });
+
     $("a").each((_, el) => {
       const href = $(el).attr("href") || "";
       const text = $(el).text().trim();
       const parentText = $(el).parent().text().trim();
       const lowerHref = href.toLowerCase();
       const combinedText = (text + " " + parentText).toLowerCase();
-      
+
       // Check for download hosts
       if (downloadHosts.some(h => lowerHref.includes(h))) {
         addLink(href, text, parentText);
         return;
       }
-      
+
       // Check for quality indicators
       if (combinedText.match(/480p|720p|1080p|2160p|4k/i)) {
         addLink(href, text, parentText);
         return;
       }
-      
+
       // Check for download keywords
       if (combinedText.includes("download") || combinedText.includes("link") || combinedText.includes("server")) {
         // Must have an external link or file extension

@@ -317,7 +317,13 @@ function discoverMovies($: cheerio.CheerioAPI, baseUrl: string, pageUrl: string)
     ".content a",
     ".main-content a",
     "#content a",
-    // WorldFree4u and similar sites
+    // WorldFree4u and similar sites - image card links
+    'a.cursor-pointer',
+    'a.group',
+    'a.block',
+    'a[class*="cursor-pointer"]',
+    'a[class*="overflow-hidden"]',
+    // Year-based URL patterns
     'a[href*="-2024"]',
     'a[href*="-2025"]',
     'a[href*="-2026"]',
@@ -339,7 +345,12 @@ function discoverMovies($: cheerio.CheerioAPI, baseUrl: string, pageUrl: string)
     try {
       $(selector).each((_, el) => {
         const href = $(el).attr("href") || "";
-        let title = $(el).attr("title") || $(el).attr("alt") || $(el).text().trim();
+        // Get title from multiple sources - including child img alt attribute
+        let title = $(el).attr("title") ||
+                    $(el).attr("alt") ||
+                    $(el).find("img").attr("alt") ||  // WorldFree4u style - title in child img alt
+                    $(el).find(".title").text().trim() ||
+                    $(el).text().trim();
         
         // Skip empty, external, or already seen
         if (!href || seenUrls.has(href)) return;
@@ -571,11 +582,15 @@ function discoverMovies($: cheerio.CheerioAPI, baseUrl: string, pageUrl: string)
   // Second pass: If no movies found, try more aggressive fallback
   if (movies.length === 0) {
     console.log("No movies found with standard selectors, trying fallback method...");
-    
+
     // Get all links and filter manually
     $("a").each((_, el) => {
       const href = $(el).attr("href") || "";
-      let title = $(el).attr("title") || $(el).text().trim();
+      // Get title from multiple sources
+      let title = $(el).attr("title") ||
+                  $(el).attr("alt") ||
+                  $(el).find("img").attr("alt") ||  // WorldFree4u style
+                  $(el).text().trim();
       
       if (!href || seenUrls.has(href)) return;
       if (href.startsWith("#") || href.startsWith("javascript:") || href.startsWith("mailto:")) return;

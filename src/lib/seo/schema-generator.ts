@@ -139,14 +139,15 @@ export function generateMovieSchema(movie: Movie) {
   };
 
   // Add keywords for search
-  if (movie.keywords) {
+  if (movie.metaKeywords) {
     try {
-      const keywords = typeof movie.keywords === 'string' ? JSON.parse(movie.keywords) : movie.keywords;
+      const keywords = typeof movie.metaKeywords === 'string' ? JSON.parse(movie.metaKeywords) : movie.metaKeywords;
       if (Array.isArray(keywords) && keywords.length > 0) {
         schema.keywords = keywords.slice(0, 10).join(", ");
       }
     } catch {
-      // Ignore parsing errors
+      // If not JSON, use as-is
+      schema.keywords = movie.metaKeywords;
     }
   }
 

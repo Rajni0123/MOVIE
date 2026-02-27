@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth";
 import * as cheerio from "cheerio";
+import { generateMetaTitle, generateMetaDescription } from "@/lib/utils";
 
 interface ScrapedData {
   title: string;
@@ -17,6 +18,8 @@ interface ScrapedData {
   cast: string[];
   keywords: string[];
   trailerUrl?: string;
+  metaTitle?: string;
+  metaDescription?: string;
 }
 
 interface TMDBMovieData {
@@ -161,9 +164,12 @@ export async function POST(request: NextRequest) {
       }
     }
     
+    // Extract description first so we can use it for rating/director extraction
+    const extractedDescription = cleanDescription(extractDescription($), url);
+
     let scrapedData: ScrapedData = {
       title: cleanedTitle,
-      description: cleanDescription(extractDescription($), url),
+      description: extractedDescription,
       posterUrl: extractPosterUrl($, url),
       backdropUrl: extractBackdropUrl($, url),
       screenshots: extractScreenshots($, url),
@@ -171,11 +177,13 @@ export async function POST(request: NextRequest) {
       genres: extractGenres($),
       releaseYear: releaseYear,
       runtime: extractRuntime($),
-      rating: extractRating($),
-      director: extractDirector($),
+      rating: extractRating($, extractedDescription),
+      director: extractDirector($, extractedDescription),
       cast: extractCast($),
       keywords: generateKeywords($, cleanedTitle),
       trailerUrl: extractTrailerUrl($),
+      metaTitle: generateMetaTitle(cleanedTitle, releaseYear || undefined),
+      metaDescription: generateMetaDescription(extractedDescription),
     };
     
     if (scrapedData.trailerUrl) {
@@ -1220,9 +1228,10 @@ function extractTrailerUrl($: cheerio.CheerioAPI): string {
   return "";
 }
 
-function extractRating($: cheerio.CheerioAPI): string {
+function extractRating($: cheerio.CheerioAPI, description?: string): string {
+  // First try CSS selectors
   const selectors = [".rating", ".imdb-rating", ".movie-rating", ".score"];
-  
+
   for (const selector of selectors) {
     const text = $(selector).first().text();
     const match = text.match(/(\d+\.?\d*)\s*\/?\s*10?/);
@@ -1231,11 +1240,32 @@ function extractRating($: cheerio.CheerioAPI): string {
       if (rating <= 10) return rating.toString();
     }
   }
-  
+
+  // Try to extract from description text
+  if (description) {
+    // Patterns like "IMDb Rating: 7.5/10", "IMDB: 8.2", "Rating: 7/10", "IMDb Ratings: 6.5/10"
+    const ratingPatterns = [
+      /IMDb\s*Ratings?\s*[:：]\s*(\d+\.?\d*)\s*\/?\s*10?/i,
+      /IMDB\s*[:：]\s*(\d+\.?\d*)\s*\/?\s*10?/i,
+      /Rating\s*[:：]\s*(\d+\.?\d*)\s*\/?\s*10?/i,
+      /(\d+\.?\d*)\s*\/\s*10\s*(?:IMDb|IMDB)?/i,
+    ];
+
+    for (const pattern of ratingPatterns) {
+      const match = description.match(pattern);
+      if (match && match[1]) {
+        const rating = parseFloat(match[1]);
+        if (rating > 0 && rating <= 10) {
+          return rating.toString();
+        }
+      }
+    }
+  }
+
   return "";
 }
 
-function extractDirector($: cheerio.CheerioAPI): string {
+function extractDirector($: cheerio.CheerioAPI, description?: string): string {
   // First try specific class selectors
   const classSelectors = [
     ".director",
@@ -1261,12 +1291,12 @@ function extractDirector($: cheerio.CheerioAPI): string {
 
   // Try to find "Director:" pattern in content area only (not nav/header/footer)
   const contentSelectors = [".entry-content", ".post-content", ".content", "article", ".movie-info", ".single-info"];
-  
+
   for (const contentSel of contentSelectors) {
     try {
       const content = $(contentSel).first();
       if (content.length === 0) continue;
-      
+
       // Look for Director pattern in text
       const html = content.html() || "";
       const directorMatch = html.match(/Director\s*[:：]\s*<[^>]*>([^<]+)<|Director\s*[:：]\s*([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)/i);
@@ -1278,6 +1308,23 @@ function extractDirector($: cheerio.CheerioAPI): string {
       }
     } catch {
       continue;
+    }
+  }
+
+  // Try to extract from description text
+  if (description) {
+    // Patterns like "Director: Chinmay Parmar", "Directed by: John Smith", "Directors: Name1, Name2"
+    const directorPatterns = [
+      /Directors?\s*[:：]\s*([A-Za-z][A-Za-z\s.,''-]+?)(?:\n|$|IMDb|Rating|Genre|Cast|Star|Release|Quality|Year|Language|Country|\|)/i,
+      /Directed\s+by\s*[:：]?\s*([A-Za-z][A-Za-z\s.,''-]+?)(?:\n|$|IMDb|Rating|Genre|Cast|Star|Release|Quality|Year|Language|Country|\|)/i,
+    ];
+
+    for (const pattern of directorPatterns) {
+      const match = description.match(pattern);
+      if (match && match[1]) {
+        const cleaned = cleanDirectorText(match[1].trim());
+        if (cleaned) return cleaned;
+      }
     }
   }
 
@@ -1411,9 +1458,21 @@ function removeWebsiteNames(text: string, sourceUrl: string): string {
     
     // Quality tags at end
     /\s*(480p|720p|1080p|2160p|4k|hdrip|webrip|bluray|dvdrip|hdcam|camrip|hdtc|hd|full hd)\s*$/gi,
-    
+
     // Language tags at end
     /\s*(hindi|english|tamil|telugu|dubbed|dual audio|multi audio)\s*$/gi,
+
+    // Pipe-separated quality/size patterns like "|| 300Mb || 720p || 1080p |"
+    /\s*\|+\s*(\d+\s*mb|\d+\s*gb|300mb|480p|720p|1080p|2160p|4k|hdrip|webrip|full movie|download)[^|]*\|*/gi,
+
+    // "Hindi Dubbed Movie Download HDRip" patterns at end
+    /\s*(hindi dubbed|dual audio|multi audio)?\s*(movie|film)?\s*(download|free download|watch online|streaming)?\s*(hdrip|webrip|bluray|dvdrip|hdcam|web-dl|webhd|hd)?\s*(esub|esubs)?\s*$/gi,
+
+    // Full "Movie Download" suffix patterns
+    /\s*(full\s+)?(movie|film)\s+(download|free download|streaming|watch online)\s*(hd|hdrip|webrip|bluray|dvdrip)?.*$/gi,
+
+    // Clean trailing pipes
+    /\s*\|+\s*$/g,
   ];
 
   let cleaned = text;
@@ -1471,9 +1530,7 @@ function fixDuplicateYears(text: string): string {
   
   // Clean up any resulting double spaces
   cleaned = cleaned.replace(/\s+/g, " ").trim();
-  
-  return cleaned;
-  
+
   return cleaned;
 }
 

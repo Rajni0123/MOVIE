@@ -184,7 +184,7 @@ export async function GET(request: NextRequest) {
         seoIndexStatus: {
           select: {
             googleIndexed: true,
-            lastChecked: true,
+            lastSubmitted: true,
           },
         },
       },

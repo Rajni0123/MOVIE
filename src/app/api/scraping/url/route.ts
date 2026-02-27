@@ -861,12 +861,23 @@ function extractDownloadLinks($: cheerio.CheerioAPI, baseUrl: string): { quality
     const lowerHref = cleanHref.toLowerCase();
     const combinedText = (text + " " + parentText).toLowerCase();
 
-    // Skip social/nav links
+    // Skip social/nav links and tracking/ad URLs
     const skipPatterns = [
+      // Social media
       "facebook.com", "twitter.com", "instagram.com", "youtube.com",
       "telegram.me", "telegram.org", "whatsapp.com", "pinterest.com",
+      // WordPress/navigation
       "#comment", "#respond", "wp-login", "wp-admin", "/feed/",
       "javascript:", "mailto:", "tel:", "/search", "?s=",
+      // Tracking/Ad networks - CRITICAL: Block these fake download links
+      "dressingcomplete.com", "api/users?token=", "submetric=",
+      "pushails.com", "pushwoosh.com", "onesignal.com",
+      "propellerads.com", "popcash.net", "adsterra.com",
+      "adskeeper.com", "mgid.com", "taboola.com", "outbrain.com",
+      "exoclick.com", "trafficjunky.com", "clickadu.com",
+      "hilltopads.com", "adcash.com", "popads.net",
+      "/api/users", "token=", "?key=", "&key=",
+      "tracking.", "tracker.", "analytics.", "metrics.",
     ];
     if (skipPatterns.some(p => lowerHref.includes(p))) return;
 

@@ -79,6 +79,7 @@ export default function UniversalScraperPage() {
   const [importCount, setImportCount] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedYear, setSelectedYear] = useState<string | null>(null);
+  const [skipDuplicates, setSkipDuplicates] = useState(true);
 
   // Discovery state
   const [discovering, setDiscovering] = useState(false);
@@ -318,6 +319,37 @@ export default function UniversalScraperPage() {
     scrapeNextMovie(queue, 0);
   };
 
+  // Normalize title for duplicate detection (same logic as backend)
+  const normalizeTitle = (title: string): string => {
+    const yearMatch = title.match(/\((\d{4})\)/);
+    const year = yearMatch ? yearMatch[1] : '';
+    const normalized = title.toLowerCase()
+      .replace(/\(\d{4}\)/g, '')
+      .replace(/\[\d{4}\]/g, '')
+      .replace(/hindi|dubbed|hd|netflix|complete|season|jiohotstar|amzn|web-dl|webrip|hdtc|hdcam|dvdrip|bluray|brrip/gi, '')
+      .replace(/v2|v3|v4|proper|x264|x265|hevc|10bit|esub|msubs|nf|hdts|predvd|scr|hdrip|camrip|telesync|ts|tc|cam|r5|dvdscr|ppvrip|hdtv|pdtv|dsr|dvbr|satrip|iptvrip|vhsrip|vodrip|web|remux|pre|dvd/gi, '')
+      .replace(/480p|720p|1080p|2160p|4k/gi, '')
+      .replace(/[^a-z0-9]/g, '')
+      .trim();
+    return normalized + year;
+  };
+
+  // Check if movie already exists (pre-scrape duplicate check)
+  const checkDuplicateMovie = async (title: string): Promise<boolean> => {
+    try {
+      // Use all=true to check against ALL movies (not just published)
+      const res = await fetch(`/api/movies/search?q=${encodeURIComponent(title)}&limit=10&all=true`);
+      const data = await res.json();
+      if (data.success && data.data?.length > 0) {
+        const normalizedInput = normalizeTitle(title);
+        return data.data.some((m: { title: string }) => normalizeTitle(m.title) === normalizedInput);
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  };
+
   // Scrape next movie
   const scrapeNextMovie = async (queue: ScrapingMovie[], index: number) => {
     if (index >= queue.length || isPaused) {
@@ -334,6 +366,25 @@ export default function UniversalScraperPage() {
       updated[index] = { ...updated[index], status: "scraping" };
       return updated;
     });
+
+    // Pre-check for duplicates (if enabled)
+    if (skipDuplicates) {
+      const isDuplicate = await checkDuplicateMovie(queue[index].title);
+      if (isDuplicate) {
+        setScrapingQueue(prev => {
+          const updated = [...prev];
+          updated[index] = {
+            ...updated[index],
+            status: "success",
+            error: "Skipped - duplicate detected"
+          };
+          return updated;
+        });
+        setCurrentIndex(index + 1);
+        setTimeout(() => scrapeNextMovie(queue, index + 1), 300);
+        return;
+      }
+    }
 
     try {
       // Scrape movie details
@@ -623,6 +674,22 @@ export default function UniversalScraperPage() {
                 {/* Import Options */}
                 <div className="space-y-4">
                   <h3 className="font-semibold">Import Options</h3>
+
+                  {/* Skip Duplicates Toggle */}
+                  <label className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg cursor-pointer hover:bg-muted/70 transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={skipDuplicates}
+                      onChange={(e) => setSkipDuplicates(e.target.checked)}
+                      className="h-5 w-5 rounded border-2 accent-primary"
+                    />
+                    <div className="flex-1">
+                      <p className="font-medium">Skip Duplicate Movies</p>
+                      <p className="text-sm text-muted-foreground">
+                        Automatically skip movies that already exist in database
+                      </p>
+                    </div>
+                  </label>
 
                   {/* Import All Button */}
                   <Button

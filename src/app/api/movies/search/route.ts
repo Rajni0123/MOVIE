@@ -7,14 +7,15 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const query = searchParams.get("q")?.toLowerCase().trim();
     const limit = Math.min(parseInt(searchParams.get("limit") || "8"), 20);
+    const checkAll = searchParams.get("all") === "true"; // For duplicate checking
 
     if (!query || query.length < 2) {
       return NextResponse.json({ success: true, data: [] });
     }
 
-    // Get all published movies and filter case-insensitively
+    // Get movies - filter by status unless checking all for duplicates
     const allMovies = await prisma.movie.findMany({
-      where: {
+      where: checkAll ? {} : {
         status: "PUBLISHED",
         isActive: true,
       },

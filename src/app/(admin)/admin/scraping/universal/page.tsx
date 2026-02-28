@@ -351,15 +351,27 @@ export default function UniversalScraperPage() {
     try {
       // Extract core title for searching (e.g., "Dead Sea" from "Dead Sea (2024) Hindi Dubbed JioHotstar")
       const coreTitle = extractCoreTitle(title);
+      console.log('[DupeCheck] Title:', title, '-> Core:', coreTitle);
       // Use all=true to check against ALL movies (not just published)
       const res = await fetch(`/api/movies/search?q=${encodeURIComponent(coreTitle)}&limit=20&all=true`);
       const data = await res.json();
+      console.log('[DupeCheck] Search results:', data.data?.length || 0);
       if (data.success && data.data?.length > 0) {
         const normalizedInput = normalizeTitle(title);
-        return data.data.some((m: { title: string }) => normalizeTitle(m.title) === normalizedInput);
+        console.log('[DupeCheck] Normalized input:', normalizedInput);
+        const match = data.data.find((m: { title: string }) => {
+          const normDb = normalizeTitle(m.title);
+          console.log('[DupeCheck] Compare:', normDb, '===', normalizedInput, '?', normDb === normalizedInput);
+          return normDb === normalizedInput;
+        });
+        if (match) {
+          console.log('[DupeCheck] DUPLICATE FOUND:', match.title);
+          return true;
+        }
       }
       return false;
-    } catch {
+    } catch (err) {
+      console.error('[DupeCheck] Error:', err);
       return false;
     }
   };

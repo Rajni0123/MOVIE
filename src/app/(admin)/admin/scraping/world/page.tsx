@@ -66,10 +66,17 @@ export default function WorldScraperPage() {
 
   const [error, setError] = useState("");
 
+  // Refs to fix closure issues in async functions
   const skipDuplicatesRef = useRef(skipDuplicates);
+  const isPausedRef = useRef(isPaused);
+
   useEffect(() => {
     skipDuplicatesRef.current = skipDuplicates;
   }, [skipDuplicates]);
+
+  useEffect(() => {
+    isPausedRef.current = isPaused;
+  }, [isPaused]);
 
   // Normalize title for duplicate detection
   const normalizeTitle = (title: string): string => {
@@ -79,37 +86,62 @@ export default function WorldScraperPage() {
       .replace(/\(\d{4}\)/g, '')
       .replace(/\[\d{4}\]/g, '')
       .replace(/\b(19|20)\d{2}\b/g, '')
-      .replace(/hindi|dubbed|hd|netflix|complete|season|dual\s*audio|hdrip|bluray|webrip|camrip/gi, '')
-      .replace(/v2|v3|v4|proper|x264|x265|hevc|10bit|esub|msubs/gi, '')
-      .replace(/480p|720p|1080p|2160p|4k|300mb/gi, '')
+      // Remove all quality/format markers
+      .replace(/hindi|dubbed|hd|netflix|complete|season|dual\s*audio|hdrip|bluray|webrip|camrip|hdtc|hdts|hdcam|dvdrip|brrip|web-dl|amzn|nf|hmax/gi, '')
+      .replace(/v2|v3|v4|proper|x264|x265|hevc|10bit|esub|msubs|aac/gi, '')
+      .replace(/480p|720p|1080p|2160p|4k|300mb|400mb|500mb|600mb|700mb|800mb|1gb|2gb/gi, '')
+      // Remove download/movie keywords
+      .replace(/download|movie|film|free|watch|online|stream|full/gi, '')
+      // Remove worldfree4u specific
+      .replace(/worldfree4u/gi, '')
       .replace(/[^a-z0-9]/g, '')
       .trim();
     return normalized + year;
   };
 
-  // Extract core title for search
+  // Extract core title for search - more aggressive cleaning for WorldFree4u
   const extractCoreTitle = (title: string): string => {
     let core = title
-      .replace(/\s*(dual\s*audio|hindi|dubbed|hdrip|bluray|webrip|camrip|300mb|720p|1080p).*/i, '')
-      .replace(/\s*\(\d{4}\).*/, match => match.split(')')[0] + ')')
+      // Remove everything after quality/format markers
+      .replace(/\s*(dual\s*audio|hindi\s*dubbed|hindi|dubbed|hdrip|bluray|webrip|camrip|hdtc|hdts|hdcam|300mb|400mb|480p|720p|1080p|2160p|download|movie).*/i, '')
+      // Keep year in parentheses but remove rest
+      .replace(/\s*\(\d{4}\).*/, match => {
+        const yearMatch = match.match(/\(\d{4}\)/);
+        return yearMatch ? '' : match; // Remove year for search
+      })
       .replace(/\s*\|\|.*/, '')
+      .replace(/\s*\b(19|20)\d{2}\b.*/, '') // Remove year and everything after
       .trim();
-    const nameOnly = core.replace(/\s*\(\d{4}\)/, '').replace(/\s*\b(19|20)\d{2}\b/, '').trim();
-    return nameOnly.length > 2 ? nameOnly : core;
+    return core.length > 2 ? core : title.split(/\s+/).slice(0, 3).join(' '); // Fallback to first 3 words
   };
 
-  // Check duplicate
+  // Check duplicate - with logging
   const checkDuplicateMovie = async (title: string): Promise<boolean> => {
     try {
       const coreTitle = extractCoreTitle(title);
+      console.log(`[DUPLICATE CHECK] Title: "${title}" -> Core: "${coreTitle}"`);
+
       const res = await fetch(`/api/movies/search?q=${encodeURIComponent(coreTitle)}&limit=20&all=true`);
       const data = await res.json();
+
       if (data.success && data.data?.length > 0) {
         const normalizedInput = normalizeTitle(title);
-        return data.data.some((m: { title: string }) => normalizeTitle(m.title) === normalizedInput);
+        console.log(`[DUPLICATE CHECK] Normalized input: "${normalizedInput}"`);
+        console.log(`[DUPLICATE CHECK] Found ${data.data.length} potential matches`);
+
+        for (const m of data.data) {
+          const normalizedDb = normalizeTitle(m.title);
+          console.log(`[DUPLICATE CHECK] Comparing with: "${m.title}" -> "${normalizedDb}"`);
+          if (normalizedDb === normalizedInput) {
+            console.log(`[DUPLICATE CHECK] MATCH FOUND!`);
+            return true;
+          }
+        }
       }
+      console.log(`[DUPLICATE CHECK] No duplicate found`);
       return false;
-    } catch {
+    } catch (err) {
+      console.error(`[DUPLICATE CHECK] Error:`, err);
       return false;
     }
   };
@@ -175,7 +207,8 @@ export default function WorldScraperPage() {
 
   // Scrape next movie
   const scrapeNextMovie = async (queue: ScrapingMovie[], index: number) => {
-    if (index >= queue.length || isPaused) {
+    // Use ref to get current pause state (fixes closure issue)
+    if (index >= queue.length || isPausedRef.current) {
       setIsScraping(false);
       if (index >= queue.length) {
         setStep("done");

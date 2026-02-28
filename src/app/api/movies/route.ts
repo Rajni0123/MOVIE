@@ -160,15 +160,23 @@ export async function POST(request: NextRequest) {
     const year = extractYear(body.releaseDate);
     const slug = body.slug || generateSlug(body.title, year);
 
-    // Normalize title for duplicate detection
+    // Normalize title for duplicate detection - extract year first to keep movies from different years separate
     const normalizeTitle = (title: string) => {
-      return title.toLowerCase()
+      // Extract year from title to keep movies from different years separate
+      const yearMatch = title.match(/\((\d{4})\)/);
+      const extractedYear = yearMatch ? yearMatch[1] : '';
+
+      const normalized = title.toLowerCase()
         .replace(/\(\d{4}\)/g, '') // Remove year in parentheses
         .replace(/\[\d{4}\]/g, '') // Remove year in brackets
         .replace(/hindi|dubbed|hd|netflix|complete|season|jiohotstar|amzn|web-dl|webrip|hdtc|hdcam|dvdrip|bluray|brrip/gi, '')
+        .replace(/v2|v3|v4|proper|x264|x265|hevc|10bit|esub|msubs|nf|hdts|predvd|scr|hdrip|camrip|telesync|ts|tc|cam|r5|dvdscr|ppvrip|hdtv|pdtv|dsr|dvbr|satrip|iptvrip|vhsrip|vodrip|web|remux|pre|dvd/gi, '')
         .replace(/480p|720p|1080p|2160p|4k/gi, '')
         .replace(/[^a-z0-9]/g, '')
         .trim();
+
+      // Append year to keep movies from different years separate (e.g., Karam 2005 vs Karam 2025)
+      return normalized + extractedYear;
     };
 
     const normalizedTitle = normalizeTitle(body.title);

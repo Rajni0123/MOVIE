@@ -67,6 +67,20 @@ export async function POST(
       );
     }
 
+    // Reject image URLs - these should never be saved as download links
+    const lowerUrl = linkUrl.toLowerCase();
+    const invalidPatterns = [
+      "image.tmdb.org", "tmdb.org/t/p",
+      ".jpg", ".jpeg", ".png", ".webp", ".gif", ".svg", ".ico",
+      "poster", "backdrop", "thumbnail"
+    ];
+    if (invalidPatterns.some(p => lowerUrl.includes(p))) {
+      return NextResponse.json(
+        { success: false, error: "Invalid URL: Image URLs cannot be saved as download links" },
+        { status: 400 }
+      );
+    }
+
     const link = await prisma.streamingLink.create({
       data: {
         movieId,

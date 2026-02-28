@@ -2373,12 +2373,15 @@ async function scrapeDownloadPage(pageUrl: string): Promise<{ quality: string; l
       const lowerHref = cleanHref.toLowerCase();
       const combinedText = (text + " " + parentText).toLowerCase();
       
-      // Skip social/nav links
+      // Skip social/nav links and image URLs
       const skipPatterns = [
         "facebook.com", "twitter.com", "instagram.com", "youtube.com/watch",
         "telegram.me", "telegram.org", "whatsapp.com", "pinterest.com",
         "#comment", "#respond", "wp-login", "wp-admin",
-        "/tag/", "/category/", "/author/", "?s=", "/feed/", "/search"
+        "/tag/", "/category/", "/author/", "?s=", "/feed/", "/search",
+        // Image URLs - NEVER save as download links
+        "image.tmdb.org", "tmdb.org/t/p", ".jpg", ".jpeg", ".png", ".webp", ".gif", ".svg", ".ico",
+        "poster", "backdrop", "thumbnail", "avatar", "logo"
       ];
       if (skipPatterns.some(p => lowerHref.includes(p))) return;
       

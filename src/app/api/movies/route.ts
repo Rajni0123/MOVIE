@@ -160,7 +160,20 @@ export async function POST(request: NextRequest) {
     const year = extractYear(body.releaseDate);
     const slug = body.slug || generateSlug(body.title, year);
 
-    // Check if movie already exists by slug OR similar title
+    // Normalize title for duplicate detection
+    const normalizeTitle = (title: string) => {
+      return title.toLowerCase()
+        .replace(/\(\d{4}\)/g, '') // Remove year in parentheses
+        .replace(/\[\d{4}\]/g, '') // Remove year in brackets
+        .replace(/hindi|dubbed|hd|netflix|complete|season|jiohotstar|amzn|web-dl|webrip|hdtc|hdcam|dvdrip|bluray|brrip/gi, '')
+        .replace(/480p|720p|1080p|2160p|4k/gi, '')
+        .replace(/[^a-z0-9]/g, '')
+        .trim();
+    };
+
+    const normalizedTitle = normalizeTitle(body.title);
+
+    // Check if movie already exists by slug OR exact title
     const existingMovie = await prisma.movie.findFirst({
       where: {
         OR: [
@@ -176,6 +189,24 @@ export async function POST(request: NextRequest) {
           success: false,
           error: `Movie already exists: "${existingMovie.title}" (ID: ${existingMovie.id})`,
           data: { existingId: existingMovie.id, existingSlug: existingMovie.slug }
+        },
+        { status: 409 } // Conflict
+      );
+    }
+
+    // If not found, check by normalized title (fuzzy match)
+    const allMovies = await prisma.movie.findMany({
+      select: { id: true, title: true, slug: true },
+      take: 5000, // Limit for performance
+    });
+
+    const fuzzyMatch = allMovies.find(m => normalizeTitle(m.title) === normalizedTitle);
+    if (fuzzyMatch) {
+      return NextResponse.json<ApiResponse>(
+        {
+          success: false,
+          error: `Movie already exists: "${fuzzyMatch.title}" (ID: ${fuzzyMatch.id})`,
+          data: { existingId: fuzzyMatch.id, existingSlug: fuzzyMatch.slug }
         },
         { status: 409 } // Conflict
       );

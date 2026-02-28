@@ -413,6 +413,7 @@ export default function MoviesPage() {
               <option value="PUBLISHED">Published</option>
               <option value="DRAFT">Draft</option>
               <option value="UNPUBLISHED">Unpublished</option>
+              <option value="POPULAR">⭐ Popular</option>
             </Select>
             <Button type="submit">Search</Button>
             {search && (

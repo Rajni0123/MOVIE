@@ -17,14 +17,33 @@ export const metadata = generateHomeMetadata();
 
 async function getLatestMovies() {
   try {
-    return await prisma.movie.findMany({
-      where: { 
+    // First get Popular/Featured movies (sticky at top)
+    const featuredMovies = await prisma.movie.findMany({
+      where: {
         status: "PUBLISHED",
         isActive: true,
+        isFeatured: true,
+      },
+      orderBy: [
+        { featuredOrder: "desc" },
+        { createdAt: "desc" },
+      ],
+    });
+
+    // Then get regular latest movies (excluding featured to avoid duplicates)
+    const featuredIds = featuredMovies.map(m => m.id);
+    const regularMovies = await prisma.movie.findMany({
+      where: {
+        status: "PUBLISHED",
+        isActive: true,
+        id: { notIn: featuredIds.length > 0 ? featuredIds : [-1] },
       },
       orderBy: { createdAt: "desc" },
-      take: 18,
+      take: Math.max(0, 18 - featuredMovies.length),
     });
+
+    // Combine: Featured first, then regular
+    return [...featuredMovies, ...regularMovies];
   } catch (error) {
     console.error("Error fetching latest movies:", error);
     return [];

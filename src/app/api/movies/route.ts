@@ -28,7 +28,12 @@ export async function GET(request: NextRequest) {
     const where: Prisma.MovieWhereInput = {};
 
     if (status) {
-      where.status = status as "DRAFT" | "PUBLISHED" | "UNPUBLISHED";
+      // Handle special "POPULAR" filter for featured movies
+      if (status === "POPULAR") {
+        where.isFeatured = true;
+      } else {
+        where.status = status as "DRAFT" | "PUBLISHED" | "UNPUBLISHED";
+      }
     }
 
     if (genre) {

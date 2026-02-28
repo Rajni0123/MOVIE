@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { Film, Search, X, Clapperboard, Play, Tv, Star, Video } from "lucide-react";
+import { Film, Search, X, Clapperboard, Play, Tv, Star, Video, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 
 interface SiteSettings {
@@ -12,6 +12,15 @@ interface SiteSettings {
   logoText: string;
   logoUrl: string;
   logoIcon: string;
+}
+
+interface SearchResult {
+  id: number;
+  title: string;
+  slug: string;
+  posterUrl: string | null;
+  year: number | null;
+  rating: number | null;
 }
 
 const iconMap: Record<string, React.ElementType> = {
@@ -23,10 +32,30 @@ const iconMap: Record<string, React.ElementType> = {
   Video: Video,
 };
 
+// Debounce hook
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => clearTimeout(handler);
+  }, [value, delay]);
+
+  return debouncedValue;
+}
+
 export function Header() {
   const router = useRouter();
   const [search, setSearch] = useState("");
   const [showSearch, setShowSearch] = useState(false);
+  const [showResults, setShowResults] = useState(false);
+  const [results, setResults] = useState<SearchResult[]>([]);
+  const [loading, setLoading] = useState(false);
+  const searchRef = useRef<HTMLDivElement>(null);
+  const mobileSearchRef = useRef<HTMLDivElement>(null);
   const [settings, setSettings] = useState<SiteSettings>({
     siteName: "MovPix",
     logoType: "text",
@@ -35,6 +64,9 @@ export function Header() {
     logoIcon: "Film",
   });
 
+  const debouncedSearch = useDebounce(search, 300);
+
+  // Fetch settings
   useEffect(() => {
     fetch("/api/settings")
       .then((res) => res.json())
@@ -53,15 +85,121 @@ export function Header() {
       .catch(() => {});
   }, []);
 
+  // Live search
+  useEffect(() => {
+    if (debouncedSearch.length < 2) {
+      setResults([]);
+      setShowResults(false);
+      return;
+    }
+
+    const searchMovies = async () => {
+      setLoading(true);
+      try {
+        const res = await fetch(`/api/movies/search?q=${encodeURIComponent(debouncedSearch)}&limit=8`);
+        const data = await res.json();
+        if (data.success) {
+          setResults(data.data);
+          setShowResults(data.data.length > 0);
+        }
+      } catch (error) {
+        console.error("Search error:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    searchMovies();
+  }, [debouncedSearch]);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (
+        searchRef.current && !searchRef.current.contains(e.target as Node) &&
+        mobileSearchRef.current && !mobileSearchRef.current.contains(e.target as Node)
+      ) {
+        setShowResults(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (search.trim()) {
       router.push(`/search?q=${encodeURIComponent(search)}`);
       setShowSearch(false);
+      setShowResults(false);
+      setSearch("");
     }
   };
 
+  const handleResultClick = (slug: string) => {
+    router.push(`/movie/${slug}`);
+    setShowResults(false);
+    setShowSearch(false);
+    setSearch("");
+  };
+
   const LogoIcon = iconMap[settings.logoIcon] || Film;
+
+  const SearchDropdown = () => (
+    <div className="absolute left-0 right-0 top-full z-50 mt-1 max-h-[70vh] overflow-y-auto rounded-lg border bg-background shadow-lg">
+      {loading ? (
+        <div className="flex items-center justify-center py-4">
+          <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+        </div>
+      ) : results.length > 0 ? (
+        <>
+          {results.map((movie) => (
+            <button
+              key={movie.id}
+              onClick={() => handleResultClick(movie.slug)}
+              className="flex w-full items-center gap-3 px-3 py-2 text-left transition-colors hover:bg-muted"
+            >
+              {movie.posterUrl ? (
+                <img
+                  src={movie.posterUrl}
+                  alt={movie.title}
+                  className="h-12 w-8 rounded object-cover"
+                />
+              ) : (
+                <div className="flex h-12 w-8 items-center justify-center rounded bg-muted">
+                  <Film className="h-4 w-4 text-muted-foreground" />
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                <p className="truncate font-medium text-sm">{movie.title}</p>
+                <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                  {movie.year && <span>{movie.year}</span>}
+                  {movie.rating && (
+                    <span className="flex items-center gap-0.5">
+                      <Star className="h-3 w-3 fill-yellow-500 text-yellow-500" />
+                      {movie.rating.toFixed(1)}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </button>
+          ))}
+          <button
+            onClick={handleSearch}
+            className="flex w-full items-center justify-center gap-2 border-t py-2 text-sm text-primary hover:bg-muted"
+          >
+            <Search className="h-4 w-4" />
+            See all results for "{search}"
+          </button>
+        </>
+      ) : search.length >= 2 ? (
+        <div className="py-4 text-center text-sm text-muted-foreground">
+          No movies found for "{search}"
+        </div>
+      ) : null}
+    </div>
+  );
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
@@ -135,24 +273,31 @@ export function Header() {
           </button>
 
           {/* Desktop Search */}
-          <form onSubmit={handleSearch} className="hidden md:block">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                type="search"
-                placeholder="Search movies..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="w-48 pl-9 lg:w-64"
-              />
-            </div>
-          </form>
+          <div ref={searchRef} className="relative hidden md:block">
+            <form onSubmit={handleSearch}>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  type="search"
+                  placeholder="Search movies..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  onFocus={() => results.length > 0 && setShowResults(true)}
+                  className="w-48 pl-9 lg:w-64"
+                />
+                {loading && (
+                  <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
+                )}
+              </div>
+            </form>
+            {showResults && <SearchDropdown />}
+          </div>
         </div>
       </div>
 
       {/* Mobile Search Bar */}
       {showSearch && (
-        <div className="border-t p-3 md:hidden">
+        <div ref={mobileSearchRef} className="relative border-t p-3 md:hidden">
           <form onSubmit={handleSearch}>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -161,11 +306,16 @@ export function Header() {
                 placeholder="Search movies..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
+                onFocus={() => results.length > 0 && setShowResults(true)}
                 className="w-full pl-9"
                 autoFocus
               />
+              {loading && (
+                <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
+              )}
             </div>
           </form>
+          {showResults && <SearchDropdown />}
         </div>
       )}
     </header>

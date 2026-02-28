@@ -115,7 +115,7 @@ export default function LoginPage() {
                 name="email"
                 value={formData.email}
                 onChange={handleChange}
-                placeholder="admin@moviehub.com"
+                placeholder="Enter your email"
                 required
               />
             </div>

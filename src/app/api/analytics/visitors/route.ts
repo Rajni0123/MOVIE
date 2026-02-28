@@ -14,7 +14,12 @@ interface VisitorRow {
 }
 
 interface CountRow {
-  count: number;
+  count: bigint | number;
+}
+
+// Helper to convert BigInt to Number for JSON serialization
+function toNumber(value: bigint | number): number {
+  return typeof value === 'bigint' ? Number(value) : value;
 }
 
 // GET /api/analytics/visitors - Get active visitors (admin only)
@@ -27,7 +32,7 @@ export async function GET(request: NextRequest) {
   try {
     // Clean up old sessions first
     await prisma.$executeRawUnsafe(`
-      DELETE FROM active_visitors 
+      DELETE FROM active_visitors
       WHERE last_seen < datetime('now', '-5 minutes')
     `);
 
@@ -36,17 +41,17 @@ export async function GET(request: NextRequest) {
       SELECT COUNT(*) as count FROM active_visitors
       WHERE last_seen >= datetime('now', '-5 minutes')
     `;
-    const totalActive = countResult[0]?.count || 0;
+    const totalActive = toNumber(countResult[0]?.count || 0);
 
     // Get device breakdown
-    const deviceStats = await prisma.$queryRaw<{ device: string; count: number }[]>`
+    const deviceStats = await prisma.$queryRaw<{ device: string; count: bigint | number }[]>`
       SELECT device, COUNT(*) as count FROM active_visitors
       WHERE last_seen >= datetime('now', '-5 minutes')
       GROUP BY device
     `;
 
     // Get page breakdown (top 10)
-    const pageStats = await prisma.$queryRaw<{ page: string; count: number }[]>`
+    const pageStats = await prisma.$queryRaw<{ page: string; count: bigint | number }[]>`
       SELECT page, COUNT(*) as count FROM active_visitors
       WHERE last_seen >= datetime('now', '-5 minutes')
       GROUP BY page
@@ -68,12 +73,12 @@ export async function GET(request: NextRequest) {
       data: {
         totalActive,
         deviceStats: deviceStats.reduce((acc, d) => {
-          acc[d.device || "unknown"] = d.count;
+          acc[d.device || "unknown"] = toNumber(d.count);
           return acc;
         }, {} as Record<string, number>),
         pageStats: pageStats.map(p => ({
           page: p.page,
-          count: p.count,
+          count: toNumber(p.count),
         })),
         visitors: visitors.map(v => ({
           id: v.id.substring(0, 8) + "...",

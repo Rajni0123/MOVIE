@@ -63,7 +63,7 @@ export async function GET(request: NextRequest) {
       .find((iface) => iface && !iface.internal && iface.family === "IPv4")?.address || "N/A";
 
     // Load average (Linux/Mac)
-    const loadAvg = os.loadaverage();
+    const loadAvg = os.loadavg();
 
     // PM2 process info (if available)
     let pm2Info = null;

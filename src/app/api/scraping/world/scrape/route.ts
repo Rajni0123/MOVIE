@@ -119,17 +119,49 @@ export async function POST(request: NextRequest) {
       metaDescription: generateMetaDescription(description),
     };
 
-    // Try TMDB for better images
+    // ALWAYS try TMDB for better images - this is critical for good posters
     try {
-      const tmdbData = await searchTMDB(title, releaseYear);
+      // Clean title aggressively for TMDB search
+      const tmdbSearchTitle = cleanTitleForTMDB(title);
+      console.log(`[WORLD SCRAPE] TMDB search with: "${tmdbSearchTitle}" year: ${releaseYear}`);
+
+      const tmdbData = await searchTMDB(tmdbSearchTitle, releaseYear);
       if (tmdbData) {
-        if (tmdbData.posterUrl) scrapedData.posterUrl = tmdbData.posterUrl;
-        if (tmdbData.backdropUrl) scrapedData.backdropUrl = tmdbData.backdropUrl;
-        if (tmdbData.rating && parseFloat(tmdbData.rating) > 0) scrapedData.rating = tmdbData.rating;
-        if (!scrapedData.description && tmdbData.description) scrapedData.description = tmdbData.description;
-        if (scrapedData.genres.length === 0 && tmdbData.genres?.length) scrapedData.genres = tmdbData.genres;
-        if (!scrapedData.runtime && tmdbData.runtime) scrapedData.runtime = tmdbData.runtime;
-        console.log("[WORLD SCRAPE] TMDB data applied");
+        // ALWAYS use TMDB poster/backdrop - scraped ones are usually watermarked
+        if (tmdbData.posterUrl) {
+          scrapedData.posterUrl = tmdbData.posterUrl;
+          console.log("[WORLD SCRAPE] Using TMDB poster:", tmdbData.posterUrl);
+        }
+        if (tmdbData.backdropUrl) {
+          scrapedData.backdropUrl = tmdbData.backdropUrl;
+        }
+        if (tmdbData.rating && parseFloat(tmdbData.rating) > 0) {
+          scrapedData.rating = tmdbData.rating;
+        }
+        if (tmdbData.description) {
+          scrapedData.description = tmdbData.description;
+        }
+        if (tmdbData.genres?.length) {
+          scrapedData.genres = tmdbData.genres;
+        }
+        if (tmdbData.runtime) {
+          scrapedData.runtime = tmdbData.runtime;
+        }
+        // Also update title to clean version
+        if (tmdbData.title) {
+          scrapedData.title = tmdbData.title;
+          scrapedData.metaTitle = generateMetaTitle(tmdbData.title, releaseYear || undefined);
+        }
+        console.log("[WORLD SCRAPE] TMDB data applied successfully");
+      } else {
+        console.log("[WORLD SCRAPE] No TMDB data found");
+        // If no TMDB, clear bad poster (WorldFree4u watermarked images)
+        if (scrapedData.posterUrl.includes("worldfree4u") ||
+            scrapedData.posterUrl.includes("screenshot") ||
+            scrapedData.posterUrl.includes("logo")) {
+          scrapedData.posterUrl = "";
+          scrapedData.backdropUrl = "";
+        }
       }
     } catch (e) {
       console.log("[WORLD SCRAPE] TMDB lookup failed:", e);
@@ -504,8 +536,31 @@ function extractCast($: cheerio.CheerioAPI): string[] {
   return cast;
 }
 
+// Clean title aggressively for TMDB search
+function cleanTitleForTMDB(title: string): string {
+  return title
+    // Remove year in parentheses
+    .replace(/\(\d{4}\)/g, "")
+    // Remove standalone year
+    .replace(/\b(19|20)\d{2}\b/g, "")
+    // Remove quality markers
+    .replace(/\s*(480p|720p|1080p|2160p|4k|hd|hdtc|hdts|hdcam|hdrip|webrip|bluray|dvdrip|camrip|300mb|400mb|500mb|600mb|700mb|800mb|1gb|2gb)/gi, "")
+    // Remove audio/language markers
+    .replace(/\s*(dual\s*audio|hindi\s*dubbed|hindi|dubbed|english|tamil|telugu)/gi, "")
+    // Remove source markers
+    .replace(/\s*(download|movie|film|free|watch|online|stream|full)/gi, "")
+    // Remove format markers
+    .replace(/\s*(x264|x265|hevc|10bit|aac|esub|msubs|web-dl|webrip|amzn|nf|hmax)/gi, "")
+    // Remove special chars but keep spaces
+    .replace(/[^\w\s]/g, " ")
+    // Clean multiple spaces
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 // Search TMDB for movie data
 async function searchTMDB(title: string, year: string): Promise<{
+  title: string;
   posterUrl: string;
   backdropUrl: string;
   description: string;
@@ -514,13 +569,7 @@ async function searchTMDB(title: string, year: string): Promise<{
   runtime: string;
 } | null> {
   try {
-    // Clean title for TMDB search
-    const cleanedTitle = title
-      .replace(/\(\d{4}\)/g, "")
-      .replace(/\s*(dual audio|hindi|dubbed|720p|1080p|300mb).*/gi, "")
-      .trim();
-
-    const searchUrl = `https://api.themoviedb.org/3/search/movie?query=${encodeURIComponent(cleanedTitle)}${year ? `&year=${year}` : ""}&api_key=${process.env.TMDB_API_KEY}`;
+    const searchUrl = `https://api.themoviedb.org/3/search/movie?query=${encodeURIComponent(title)}${year ? `&year=${year}` : ""}&api_key=${process.env.TMDB_API_KEY}`;
 
     const searchRes = await fetch(searchUrl);
     const searchData = await searchRes.json();
@@ -535,6 +584,7 @@ async function searchTMDB(title: string, year: string): Promise<{
     const details = await detailsRes.json();
 
     return {
+      title: movie.title || "",
       posterUrl: movie.poster_path ? `https://image.tmdb.org/t/p/w500${movie.poster_path}` : "",
       backdropUrl: movie.backdrop_path ? `https://image.tmdb.org/t/p/original${movie.backdrop_path}` : "",
       description: movie.overview || "",

@@ -78,11 +78,10 @@ export default function WorldScraperPage() {
     isPausedRef.current = isPaused;
   }, [isPaused]);
 
-  // Normalize title for duplicate detection
+  // Normalize title for duplicate detection - STRICT MODE (no year)
   const normalizeTitle = (title: string): string => {
-    const yearMatch = title.match(/\((\d{4})\)|\b(19|20)\d{2}\b/);
-    const year = yearMatch ? (yearMatch[1] || yearMatch[0]) : '';
-    const normalized = title.toLowerCase()
+    return title.toLowerCase()
+      // Remove years in all formats
       .replace(/\(\d{4}\)/g, '')
       .replace(/\[\d{4}\]/g, '')
       .replace(/\b(19|20)\d{2}\b/g, '')
@@ -94,9 +93,9 @@ export default function WorldScraperPage() {
       .replace(/download|movie|film|free|watch|online|stream|full/gi, '')
       // Remove worldfree4u specific
       .replace(/worldfree4u/gi, '')
+      // Remove all non-alphanumeric
       .replace(/[^a-z0-9]/g, '')
       .trim();
-    return normalized + year;
   };
 
   // Extract core title for search - more aggressive cleaning for WorldFree4u
@@ -115,29 +114,53 @@ export default function WorldScraperPage() {
     return core.length > 2 ? core : title.split(/\s+/).slice(0, 3).join(' '); // Fallback to first 3 words
   };
 
-  // Check duplicate - with logging
+  // Check duplicate - STRICT with multiple search variations
   const checkDuplicateMovie = async (title: string): Promise<boolean> => {
     try {
       const coreTitle = extractCoreTitle(title);
-      console.log(`[DUPLICATE CHECK] Title: "${title}" -> Core: "${coreTitle}"`);
+      const normalizedInput = normalizeTitle(title);
+      console.log(`[DUPLICATE CHECK] Title: "${title}"`);
+      console.log(`[DUPLICATE CHECK] Core: "${coreTitle}" | Normalized: "${normalizedInput}"`);
 
-      const res = await fetch(`/api/movies/search?q=${encodeURIComponent(coreTitle)}&limit=20&all=true`);
-      const data = await res.json();
+      // Search with multiple variations
+      const searchTerms = [
+        coreTitle,
+        // Also try first 2-3 words only
+        coreTitle.split(' ').slice(0, 3).join(' '),
+        coreTitle.split(' ').slice(0, 2).join(' '),
+      ].filter(t => t.length >= 2);
 
-      if (data.success && data.data?.length > 0) {
-        const normalizedInput = normalizeTitle(title);
-        console.log(`[DUPLICATE CHECK] Normalized input: "${normalizedInput}"`);
-        console.log(`[DUPLICATE CHECK] Found ${data.data.length} potential matches`);
+      for (const searchTerm of searchTerms) {
+        const res = await fetch(`/api/movies/search?q=${encodeURIComponent(searchTerm)}&limit=50&all=true`);
+        const data = await res.json();
 
-        for (const m of data.data) {
-          const normalizedDb = normalizeTitle(m.title);
-          console.log(`[DUPLICATE CHECK] Comparing with: "${m.title}" -> "${normalizedDb}"`);
-          if (normalizedDb === normalizedInput) {
-            console.log(`[DUPLICATE CHECK] MATCH FOUND!`);
-            return true;
+        if (data.success && data.data?.length > 0) {
+          console.log(`[DUPLICATE CHECK] Search "${searchTerm}" found ${data.data.length} results`);
+
+          for (const m of data.data) {
+            const normalizedDb = normalizeTitle(m.title);
+
+            // Exact match
+            if (normalizedDb === normalizedInput) {
+              console.log(`[DUPLICATE CHECK] EXACT MATCH: "${m.title}"`);
+              return true;
+            }
+
+            // One contains the other (for partial matches)
+            if (normalizedInput.length >= 5 && normalizedDb.length >= 5) {
+              if (normalizedDb.includes(normalizedInput) || normalizedInput.includes(normalizedDb)) {
+                // Only match if difference is small (avoid false positives)
+                const lenDiff = Math.abs(normalizedDb.length - normalizedInput.length);
+                if (lenDiff <= 3) {
+                  console.log(`[DUPLICATE CHECK] PARTIAL MATCH: "${m.title}" (diff: ${lenDiff})`);
+                  return true;
+                }
+              }
+            }
           }
         }
       }
+
       console.log(`[DUPLICATE CHECK] No duplicate found`);
       return false;
     } catch (err) {

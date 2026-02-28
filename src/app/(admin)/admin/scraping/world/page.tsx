@@ -140,22 +140,11 @@ export default function WorldScraperPage() {
           for (const m of data.data) {
             const normalizedDb = normalizeTitle(m.title);
 
-            // Exact match
+            // EXACT match only - no more partial matching to avoid false positives
+            // "Mardaani" should NOT match "Mardaani 3"
             if (normalizedDb === normalizedInput) {
               console.log(`[DUPLICATE CHECK] EXACT MATCH: "${m.title}"`);
               return true;
-            }
-
-            // One contains the other (for partial matches)
-            if (normalizedInput.length >= 5 && normalizedDb.length >= 5) {
-              if (normalizedDb.includes(normalizedInput) || normalizedInput.includes(normalizedDb)) {
-                // Only match if difference is small (avoid false positives)
-                const lenDiff = Math.abs(normalizedDb.length - normalizedInput.length);
-                if (lenDiff <= 3) {
-                  console.log(`[DUPLICATE CHECK] PARTIAL MATCH: "${m.title}" (diff: ${lenDiff})`);
-                  return true;
-                }
-              }
             }
           }
         }

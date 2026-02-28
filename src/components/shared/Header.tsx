@@ -202,7 +202,7 @@ export function Header() {
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
       <div className="container flex h-14 items-center justify-between md:h-16">
         {/* Logo */}
-        <Link href="/" className="group flex items-center gap-2">
+        <Link href="/" className="group flex items-center gap-2.5">
           {settings.logoType === "image" && settings.logoUrl ? (
             <img
               src={settings.logoUrl}
@@ -215,17 +215,24 @@ export function Header() {
             />
           ) : (
             <>
-              {/* Glowing Icon */}
-              <div className="relative">
-                <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 blur-md opacity-75 group-hover:opacity-100 transition-opacity" />
-                <div className="relative rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 p-1.5">
-                  <LogoIcon className="h-5 w-5 text-white" />
+              {/* Animated Icon */}
+              <div className="relative flex items-center justify-center">
+                {/* Ping animation ring */}
+                <span className="absolute h-8 w-8 animate-ping rounded-lg bg-primary/20" />
+                {/* Icon container */}
+                <div className="relative rounded-lg bg-primary p-1.5 shadow-lg shadow-primary/25 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3">
+                  <LogoIcon className="h-5 w-5 text-primary-foreground" />
                 </div>
               </div>
-              {/* Gradient Text Logo */}
-              <span className="text-lg font-extrabold md:text-xl bg-gradient-to-r from-purple-500 via-pink-500 to-orange-400 bg-clip-text text-transparent drop-shadow-sm">
-                {settings.logoText || settings.siteName}
-              </span>
+              {/* Animated Text Logo */}
+              <div className="flex items-baseline">
+                <span className="text-xl font-black tracking-tight text-foreground transition-all duration-300 group-hover:tracking-wide md:text-2xl">
+                  {(settings.logoText || settings.siteName).slice(0, 3)}
+                </span>
+                <span className="text-xl font-black tracking-tight text-primary transition-all duration-300 group-hover:tracking-wide md:text-2xl">
+                  {(settings.logoText || settings.siteName).slice(3)}
+                </span>
+              </div>
             </>
           )}
           {/* Show text alongside image logo if image loaded */}

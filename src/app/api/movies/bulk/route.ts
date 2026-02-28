@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth";
 import prisma from "@/lib/db/prisma";
+import { indexMovies } from "@/lib/seo/indexnow";
 
 // GET /api/movies/bulk - Get all movie IDs by status
 export async function GET(request: NextRequest) {
@@ -56,6 +57,12 @@ export async function POST(request: NextRequest) {
 
     // Special actions that don't require IDs
     if (action === "publish-all-drafts") {
+      // Get slugs before updating for auto-indexing
+      const drafts = await prisma.movie.findMany({
+        where: { status: "DRAFT" },
+        select: { slug: true },
+      });
+
       const result = await prisma.movie.updateMany({
         where: { status: "DRAFT" },
         data: {
@@ -63,6 +70,17 @@ export async function POST(request: NextRequest) {
           isActive: true,
         },
       });
+
+      // Auto-index published movies to search engines
+      if (drafts.length > 0) {
+        const slugs = drafts.map(m => m.slug);
+        indexMovies(slugs).then(indexResult => {
+          console.log(`🔍 IndexNow: Bulk indexed ${indexResult.urlCount} movies`);
+        }).catch(err => {
+          console.error("❌ IndexNow bulk indexing failed:", err);
+        });
+      }
+
       return NextResponse.json({
         success: true,
         message: `${result.count} draft movies published successfully`,
@@ -100,6 +118,12 @@ export async function POST(request: NextRequest) {
 
     switch (action) {
       case "publish":
+        // Get slugs before updating for auto-indexing
+        const moviesToPublish = await prisma.movie.findMany({
+          where: { id: { in: validIds }, status: { not: "PUBLISHED" } },
+          select: { slug: true },
+        });
+
         // Bulk publish movies - set both status and isActive
         result = await prisma.movie.updateMany({
           where: {
@@ -110,6 +134,17 @@ export async function POST(request: NextRequest) {
             isActive: true,
           },
         });
+
+        // Auto-index published movies to search engines
+        if (moviesToPublish.length > 0) {
+          const slugs = moviesToPublish.map(m => m.slug);
+          indexMovies(slugs).then(indexResult => {
+            console.log(`🔍 IndexNow: Indexed ${indexResult.urlCount} movies`);
+          }).catch(err => {
+            console.error("❌ IndexNow indexing failed:", err);
+          });
+        }
+
         return NextResponse.json({
           success: true,
           message: `${result.count} movies published successfully`,

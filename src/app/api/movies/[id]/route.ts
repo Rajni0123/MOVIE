@@ -4,6 +4,7 @@ import { requireAuth } from "@/lib/auth";
 import { validateMovieData } from "@/lib/utils/validators";
 import { generateSlug, extractYear } from "@/lib/utils/slug";
 import { generateMetaDescription, generateMetaTitle } from "@/lib/utils";
+import { indexMovie } from "@/lib/seo/indexnow";
 import { ApiResponse } from "@/types/api";
 import { MovieFormData, MovieWithRelations } from "@/types/movie";
 
@@ -155,6 +156,15 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
         seoIndexStatus: true,
       },
     });
+
+    // Auto-index to search engines when movie is published
+    if (body.status === "PUBLISHED" && existingMovie.status !== "PUBLISHED") {
+      indexMovie(movie.slug).then(result => {
+        console.log(`🔍 IndexNow: ${movie.title} - ${result.message}`);
+      }).catch(err => {
+        console.error(`❌ IndexNow failed for ${movie.title}:`, err);
+      });
+    }
 
     return NextResponse.json<ApiResponse<MovieWithRelations>>({
       success: true,

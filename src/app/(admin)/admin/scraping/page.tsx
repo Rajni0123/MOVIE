@@ -330,6 +330,12 @@ export default function ScrapingPage() {
               Universal Scraper (Lifetime Import)
             </Button>
           </Link>
+          <Link href="/admin/scraping/world">
+            <Button className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600">
+              <Globe className="mr-2 h-4 w-4" />
+              World Scraper (WorldFree4u)
+            </Button>
+          </Link>
         </div>
 
         {/* Messages */}

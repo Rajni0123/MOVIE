@@ -3,6 +3,7 @@ import { Header } from "@/components/shared/Header";
 import { Footer } from "@/components/shared/Footer";
 import { MobileNav } from "@/components/shared/MobileNav";
 import { MovieCard } from "@/components/public/MovieCard";
+import { generateGenreMetadata } from "@/lib/seo/meta-generator";
 import { Layers, ChevronLeft } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -37,12 +38,8 @@ const genreMap: Record<string, string> = {
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { genre: genreSlug } = await params;
   const genreName = genreMap[genreSlug] || genreSlug;
-  
-  return {
-    title: `${genreName} Movies - Download Free HD Movies | MovPix`,
-    description: `Browse and download ${genreName} movies for free in HD quality (480p, 720p, 1080p). Find the best ${genreName} movies.`,
-    keywords: `${genreName} movies, ${genreName} movies download, ${genreName} films, best ${genreName} movies, ${genreName} movies HD`,
-  };
+
+  return generateGenreMetadata(genreName);
 }
 
 async function getMoviesByGenre(genreName: string) {

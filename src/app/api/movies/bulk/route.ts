@@ -2,6 +2,44 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth";
 import prisma from "@/lib/db/prisma";
 
+// GET /api/movies/bulk - Get all movie IDs by status
+export async function GET(request: NextRequest) {
+  try {
+    const auth = await requireAuth(request);
+    if (!auth.authenticated) {
+      return NextResponse.json(
+        { success: false, error: auth.error },
+        { status: 401 }
+      );
+    }
+
+    const { searchParams } = new URL(request.url);
+    const status = searchParams.get("status") || "DRAFT";
+
+    // Get all movie IDs with the specified status
+    const movies = await prisma.movie.findMany({
+      where: { status },
+      select: { id: true, title: true },
+      orderBy: { createdAt: "desc" },
+    });
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        ids: movies.map(m => m.id),
+        count: movies.length,
+        movies: movies,
+      },
+    });
+  } catch (error) {
+    console.error("Get bulk IDs error:", error);
+    return NextResponse.json(
+      { success: false, error: "Failed to get movie IDs" },
+      { status: 500 }
+    );
+  }
+}
+
 // POST /api/movies/bulk - Bulk operations on movies
 export async function POST(request: NextRequest) {
   try {
@@ -15,6 +53,32 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
     const { action, ids } = body;
+
+    // Special actions that don't require IDs
+    if (action === "publish-all-drafts") {
+      const result = await prisma.movie.updateMany({
+        where: { status: "DRAFT" },
+        data: {
+          status: "PUBLISHED",
+          isActive: true,
+        },
+      });
+      return NextResponse.json({
+        success: true,
+        message: `${result.count} draft movies published successfully`,
+        count: result.count,
+      });
+    }
+
+    if (action === "get-draft-count") {
+      const count = await prisma.movie.count({
+        where: { status: "DRAFT" },
+      });
+      return NextResponse.json({
+        success: true,
+        count,
+      });
+    }
 
     if (!action || !ids || !Array.isArray(ids) || ids.length === 0) {
       return NextResponse.json(

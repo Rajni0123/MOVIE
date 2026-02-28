@@ -136,11 +136,23 @@ export function generateHomeMetadata(): Metadata {
       type: "website",
       url: SITE_URL,
       siteName: SITE_NAME,
+      images: [
+        {
+          url: `${SITE_URL}/icon-512.png`,
+          width: 1200,
+          height: 630,
+          alt: `${SITE_NAME} - Free Movie Downloads`,
+        },
+      ],
     },
     twitter: {
-      card: "summary",
+      card: "summary_large_image",
       title: `${SITE_NAME} - Download Movies Free HD`,
       description: `Download latest movies for free in HD quality.`,
+      images: [`${SITE_URL}/icon-512.png`],
+    },
+    alternates: {
+      canonical: SITE_URL,
     },
   };
 }
@@ -167,6 +179,30 @@ export function generateYearMetadata(year: number): Metadata {
     title: `${year} Movies - Download Free HD Movies | ${SITE_NAME}`,
     description: `Browse and download ${year} movies for free in HD quality (480p, 720p, 1080p). Find the best movies released in ${year}.`,
     keywords,
+    openGraph: {
+      title: `${year} Movies - Download Free HD Movies | ${SITE_NAME}`,
+      description: `Browse and download ${year} movies for free in HD quality (480p, 720p, 1080p).`,
+      type: "website",
+      url: `${SITE_URL}/years/${year}`,
+      siteName: SITE_NAME,
+      images: [
+        {
+          url: `${SITE_URL}/icon-512.png`,
+          width: 1200,
+          height: 630,
+          alt: `${year} Movies - ${SITE_NAME}`,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${year} Movies - Download Free HD Movies`,
+      description: `Browse and download ${year} movies for free in HD quality.`,
+      images: [`${SITE_URL}/icon-512.png`],
+    },
+    alternates: {
+      canonical: `${SITE_URL}/years/${year}`,
+    },
   };
 }
 
@@ -190,6 +226,30 @@ export function generateTrendingMetadata(): Metadata {
     title: `Trending Movies - Download Popular Movies Free | ${SITE_NAME}`,
     description: `Download trending and most popular movies for free in HD quality. Get the hottest movies everyone is watching.`,
     keywords,
+    openGraph: {
+      title: `Trending Movies - Download Popular Movies Free | ${SITE_NAME}`,
+      description: `Download trending and most popular movies for free in HD quality.`,
+      type: "website",
+      url: `${SITE_URL}/trending`,
+      siteName: SITE_NAME,
+      images: [
+        {
+          url: `${SITE_URL}/icon-512.png`,
+          width: 1200,
+          height: 630,
+          alt: `Trending Movies - ${SITE_NAME}`,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `Trending Movies - Download Popular Movies Free`,
+      description: `Download trending and most popular movies for free in HD quality.`,
+      images: [`${SITE_URL}/icon-512.png`],
+    },
+    alternates: {
+      canonical: `${SITE_URL}/trending`,
+    },
   };
 }
 
@@ -213,6 +273,158 @@ export function generateMoviesListMetadata(): Metadata {
     title: `All Movies - Download Free HD Movies | ${SITE_NAME}`,
     description: `Browse our complete collection of movies. Download any movie for free in HD quality (480p, 720p, 1080p).`,
     keywords,
+    openGraph: {
+      title: `All Movies - Download Free HD Movies | ${SITE_NAME}`,
+      description: `Browse our complete collection of movies. Download any movie for free in HD quality.`,
+      type: "website",
+      url: `${SITE_URL}/movies`,
+      siteName: SITE_NAME,
+      images: [
+        {
+          url: `${SITE_URL}/icon-512.png`,
+          width: 1200,
+          height: 630,
+          alt: `All Movies - ${SITE_NAME}`,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `All Movies - Download Free HD Movies`,
+      description: `Browse our complete collection of movies. Download any movie for free in HD quality.`,
+      images: [`${SITE_URL}/icon-512.png`],
+    },
+    alternates: {
+      canonical: `${SITE_URL}/movies`,
+    },
+  };
+}
+
+/**
+ * Generate metadata for genre page
+ */
+export function generateGenreMetadata(genre: string): Metadata {
+  const currentYear = new Date().getFullYear();
+  const capitalizedGenre = genre.charAt(0).toUpperCase() + genre.slice(1);
+  const keywords = [
+    `${genre} movies`,
+    `${genre} movies download`,
+    `${genre} HD movies`,
+    `best ${genre} movies`,
+    `latest ${genre} movies`,
+    `${genre} movies ${currentYear}`,
+    `download ${genre} movies free`,
+    `${genre} movies 480p`,
+    `${genre} movies 720p`,
+    `${genre} movies 1080p`,
+  ].join(", ");
+
+  return {
+    title: `${capitalizedGenre} Movies - Download Free HD Movies | ${SITE_NAME}`,
+    description: `Browse and download ${genre} movies for free in HD quality (480p, 720p, 1080p). Find the best ${genre} movies.`,
+    keywords,
+    openGraph: {
+      title: `${capitalizedGenre} Movies - Download Free HD Movies | ${SITE_NAME}`,
+      description: `Browse and download ${genre} movies for free in HD quality (480p, 720p, 1080p).`,
+      type: "website",
+      url: `${SITE_URL}/genres/${genre.toLowerCase()}`,
+      siteName: SITE_NAME,
+      images: [
+        {
+          url: `${SITE_URL}/icon-512.png`,
+          width: 1200,
+          height: 630,
+          alt: `${capitalizedGenre} Movies - ${SITE_NAME}`,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${capitalizedGenre} Movies - Download Free HD Movies`,
+      description: `Browse and download ${genre} movies for free in HD quality.`,
+      images: [`${SITE_URL}/icon-512.png`],
+    },
+    alternates: {
+      canonical: `${SITE_URL}/genres/${genre.toLowerCase()}`,
+    },
+  };
+}
+
+/**
+ * Generate metadata for search page
+ */
+export function generateSearchMetadata(query?: string): Metadata {
+  const title = query
+    ? `Search: ${query} - ${SITE_NAME}`
+    : `Search Movies - ${SITE_NAME}`;
+  const description = query
+    ? `Search results for "${query}". Download ${query} movies in HD quality (480p, 720p, 1080p).`
+    : `Search and download movies for free in HD quality. Find any movie you want.`;
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      type: "website",
+      url: `${SITE_URL}/search`,
+      siteName: SITE_NAME,
+    },
+    twitter: {
+      card: "summary",
+      title,
+      description,
+    },
+    alternates: {
+      canonical: `${SITE_URL}/search`,
+    },
+  };
+}
+
+/**
+ * Generate metadata for popular page
+ */
+export function generatePopularMetadata(): Metadata {
+  const currentYear = new Date().getFullYear();
+  const keywords = [
+    "popular movies",
+    "most watched movies",
+    "top movies download",
+    "best movies",
+    `popular movies ${currentYear}`,
+    "highest rated movies",
+    "fan favorite movies",
+  ].join(", ");
+
+  return {
+    title: `Popular Movies - Most Watched Movies | ${SITE_NAME}`,
+    description: `Download the most popular and watched movies for free in HD quality. Discover fan favorites and top-rated films.`,
+    keywords,
+    openGraph: {
+      title: `Popular Movies - Most Watched Movies | ${SITE_NAME}`,
+      description: `Download the most popular and watched movies for free in HD quality.`,
+      type: "website",
+      url: `${SITE_URL}/popular`,
+      siteName: SITE_NAME,
+      images: [
+        {
+          url: `${SITE_URL}/icon-512.png`,
+          width: 1200,
+          height: 630,
+          alt: `Popular Movies - ${SITE_NAME}`,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `Popular Movies - Most Watched Movies`,
+      description: `Download the most popular and watched movies for free in HD quality.`,
+      images: [`${SITE_URL}/icon-512.png`],
+    },
+    alternates: {
+      canonical: `${SITE_URL}/popular`,
+    },
   };
 }
 

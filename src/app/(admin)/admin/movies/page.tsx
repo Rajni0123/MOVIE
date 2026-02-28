@@ -23,10 +23,73 @@ export default function MoviesPage() {
   // Bulk selection state
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [bulkLoading, setBulkLoading] = useState(false);
+  const [totalDrafts, setTotalDrafts] = useState(0);
+  const [allDraftIds, setAllDraftIds] = useState<number[]>([]);
 
   useEffect(() => {
     fetchMovies();
+    fetchDraftCount();
   }, [page, statusFilter]);
+
+  // Fetch total draft count
+  const fetchDraftCount = async () => {
+    try {
+      const response = await fetch("/api/movies/bulk?status=DRAFT", {
+        credentials: "include",
+      });
+      const data = await response.json();
+      if (data.success) {
+        setTotalDrafts(data.data.count);
+        setAllDraftIds(data.data.ids);
+      }
+    } catch (error) {
+      console.error("Failed to fetch draft count:", error);
+    }
+  };
+
+  // Select all drafts across all pages
+  const handleSelectAllDrafts = async () => {
+    if (allDraftIds.length === 0) {
+      alert("No draft movies found!");
+      return;
+    }
+    setSelectedIds(new Set(allDraftIds));
+  };
+
+  // Publish all drafts at once (without selecting)
+  const handlePublishAllDrafts = async () => {
+    if (totalDrafts === 0) {
+      alert("No draft movies to publish!");
+      return;
+    }
+    if (!confirm(`Are you sure you want to PUBLISH ALL ${totalDrafts} draft movies?`)) return;
+
+    setBulkLoading(true);
+    try {
+      const response = await fetch("/api/movies/bulk", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ action: "publish-all-drafts" }),
+      });
+
+      const data = await response.json();
+      if (data.success) {
+        alert(`Successfully published ${data.count} draft movies!`);
+        setSelectedIds(new Set());
+        setTotalDrafts(0);
+        setAllDraftIds([]);
+        fetchMovies();
+      } else {
+        alert(data.error || "Failed to publish movies");
+      }
+    } catch (error) {
+      console.error("Publish all drafts error:", error);
+      alert("Failed to publish movies");
+    } finally {
+      setBulkLoading(false);
+    }
+  };
 
   const fetchMovies = async () => {
     setLoading(true);
@@ -367,12 +430,36 @@ export default function MoviesPage() {
             )}
           </form>
 
-          <Link href="/admin/movies/add">
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              Add Movie
-            </Button>
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            {/* Draft Actions */}
+            {totalDrafts > 0 && (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={handleSelectAllDrafts}
+                  disabled={bulkLoading}
+                  className="border-amber-500 text-amber-600 hover:bg-amber-50"
+                >
+                  <CheckSquare className="mr-2 h-4 w-4" />
+                  Select All Drafts ({totalDrafts})
+                </Button>
+                <Button
+                  onClick={handlePublishAllDrafts}
+                  disabled={bulkLoading}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  {bulkLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                  Publish All Drafts ({totalDrafts})
+                </Button>
+              </>
+            )}
+            <Link href="/admin/movies/add">
+              <Button>
+                <Plus className="mr-2 h-4 w-4" />
+                Add Movie
+              </Button>
+            </Link>
+          </div>
         </div>
 
         {/* Bulk Actions Bar */}

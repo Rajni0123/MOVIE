@@ -146,6 +146,9 @@ export default async function HomePage() {
         <BannerAd position="header" className="mx-auto" desktopOnly={true} />
       </div>
 
+      {/* SEO H1 - Visually styled but semantically correct */}
+      <h1 className="sr-only">MovPix - Download Free HD Movies 480p 720p 1080p</h1>
+
       {/* Latest Movies */}
       <section className="container py-6 md:py-12">
         <div className="mb-4 flex items-center justify-between md:mb-6">

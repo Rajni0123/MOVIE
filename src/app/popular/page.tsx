@@ -4,16 +4,12 @@ import { Footer } from "@/components/shared/Footer";
 import { MobileNav } from "@/components/shared/MobileNav";
 import { MovieCard } from "@/components/public/MovieCard";
 import { BannerAd } from "@/components/public/AdDisplay";
+import { generatePopularMetadata } from "@/lib/seo/meta-generator";
 import { Flame, Clock, Eye } from "lucide-react";
-import { Metadata } from "next";
 
 export const dynamic = "force-dynamic";
 
-export const metadata: Metadata = {
-  title: "Popular Movies - Most Watched & Latest Releases",
-  description: "Discover the most popular movies - featuring the latest releases from the last 30 days and most viewed movies. Find trending and highly watched films.",
-  keywords: ["popular movies", "most watched movies", "latest releases", "trending movies", "new movies 2025", "2026"],
-};
+export const metadata = generatePopularMetadata();
 
 async function getPopularMovies() {
   const now = new Date();

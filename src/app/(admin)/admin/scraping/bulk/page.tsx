@@ -669,6 +669,8 @@ export default function BulkScrapingPage() {
     let hasMore = true;
     const maxPages = paginationInfo?.totalPages || 1000; // Safety limit
     const existingUrls = new Set(discoveredMovies.map(m => m.url));
+    let consecutiveEmptyPages = 0; // Track consecutive pages with no new movies
+    const maxConsecutiveEmpty = 5; // Stop after 5 consecutive empty/duplicate pages
 
     try {
       while (hasMore && page < maxPages) {
@@ -745,13 +747,18 @@ export default function BulkScrapingPage() {
               setDiscoveredMovies(allMovies);
               setCurrentPage(nextPage);
               setPaginationInfo(data.pagination || paginationInfo);
-              
-              // Auto-select new movies if user wants (optional - can be removed)
-              // For now, we'll let user manually select after import
+              consecutiveEmptyPages = 0; // Reset counter when we find new movies
+            } else {
+              // Page had movies but all were duplicates
+              consecutiveEmptyPages++;
+              console.log(`Page ${nextPage}: all ${data.movies.length} movies are duplicates (${consecutiveEmptyPages}/${maxConsecutiveEmpty} consecutive)`);
             }
 
-            // Check if there's a next page
-            if (data.pagination?.hasNextPage === false || newMovies.length === 0) {
+            // Check if there's a next page - continue even if current page had all duplicates
+            if (data.pagination?.hasNextPage === false) {
+              hasMore = false;
+            } else if (consecutiveEmptyPages >= maxConsecutiveEmpty) {
+              console.log(`Stopping: ${maxConsecutiveEmpty} consecutive pages with no new movies`);
               hasMore = false;
             } else {
               page = nextPage;
@@ -807,8 +814,16 @@ export default function BulkScrapingPage() {
                   setDiscoveredMovies(allMovies);
                   setCurrentPage(nextPage);
                   setPaginationInfo(data.pagination || paginationInfo);
+                  consecutiveEmptyPages = 0;
                   page = nextPage;
                   found = true;
+                  break;
+                } else {
+                  // Page had movies but all duplicates - continue to next
+                  consecutiveEmptyPages++;
+                  console.log(`Alt URL page ${nextPage}: all duplicates (${consecutiveEmptyPages}/${maxConsecutiveEmpty})`);
+                  page = nextPage;
+                  found = true; // Consider it found so we continue
                   break;
                 }
               }
@@ -818,7 +833,13 @@ export default function BulkScrapingPage() {
           }
 
           if (!found) {
-            hasMore = false;
+            consecutiveEmptyPages++;
+            if (consecutiveEmptyPages >= maxConsecutiveEmpty) {
+              console.log(`Alt URL: Stopping after ${maxConsecutiveEmpty} consecutive empty pages`);
+              hasMore = false;
+            } else {
+              page = nextPage; // Still move to next page
+            }
           }
         }
 
@@ -982,6 +1003,28 @@ export default function BulkScrapingPage() {
           }),
         });
         const saveData = await saveRes.json();
+
+        // Handle duplicate movies - skip instead of error
+        if (saveRes.status === 409 && saveData.data?.existingId) {
+          // Movie already exists - mark as skipped (success with note)
+          setScrapingQueue(prev => {
+            const updated = [...prev];
+            updated[index] = {
+              ...updated[index],
+              ...scraped,
+              status: "success",
+              savedId: saveData.data.existingId,
+              error: "Already exists - skipped",
+            };
+            return updated;
+          });
+          // Continue with next movie
+          setCurrentIndex(index + 1);
+          setTimeout(() => {
+            scrapeNextMovie(queue, index + 1);
+          }, 500); // Faster for skipped movies
+          return;
+        }
 
         if (saveData.success) {
           const movieId = saveData.data.id;

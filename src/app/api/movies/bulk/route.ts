@@ -232,13 +232,11 @@ export async function POST(request: NextRequest) {
         });
 
       case "featured":
-        // Bulk set as featured/popular using raw SQL
-        // Use raw SQL to bypass Prisma type checking until client is regenerated
-        const idsPlaceholders = validIds.map(() => '?').join(',');
-        await prisma.$executeRawUnsafe(
-          `UPDATE movies SET is_featured = 1, featured_order = 1 WHERE id IN (${idsPlaceholders})`,
-          ...validIds
-        );
+        // Bulk set as featured/popular using safe Prisma methods
+        await prisma.movie.updateMany({
+          where: { id: { in: validIds } },
+          data: { isFeatured: true, featuredOrder: 1 },
+        });
         return NextResponse.json({
           success: true,
           message: `${validIds.length} movies set as Popular`,
@@ -246,12 +244,11 @@ export async function POST(request: NextRequest) {
         });
 
       case "unfeatured":
-        // Bulk remove from featured/popular using raw SQL
-        const unfeaturedPlaceholders = validIds.map(() => '?').join(',');
-        await prisma.$executeRawUnsafe(
-          `UPDATE movies SET is_featured = 0, featured_order = 0 WHERE id IN (${unfeaturedPlaceholders})`,
-          ...validIds
-        );
+        // Bulk remove from featured/popular using safe Prisma methods
+        await prisma.movie.updateMany({
+          where: { id: { in: validIds } },
+          data: { isFeatured: false, featuredOrder: 0 },
+        });
         return NextResponse.json({
           success: true,
           message: `${validIds.length} movies removed from Popular`,

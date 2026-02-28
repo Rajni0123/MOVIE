@@ -5,7 +5,11 @@ import { NextRequest } from "next/server";
 import { AuthPayload } from "@/types/api";
 import prisma from "@/lib/db/prisma";
 
-const JWT_SECRET = process.env.ADMIN_JWT_SECRET || "your-secret-key";
+const _jwtSecret = process.env.ADMIN_JWT_SECRET;
+if (!_jwtSecret) {
+  throw new Error("ADMIN_JWT_SECRET environment variable is required");
+}
+const JWT_SECRET: string = _jwtSecret;
 const TOKEN_EXPIRY = "7d";
 
 /**

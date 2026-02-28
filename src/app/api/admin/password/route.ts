@@ -68,9 +68,20 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    if (newPassword.length < 6) {
+    // Strong password validation
+    if (newPassword.length < 8) {
       return NextResponse.json(
-        { error: "Password must be at least 6 characters" },
+        { error: "Password must be at least 8 characters" },
+        { status: 400 }
+      );
+    }
+
+    // Check for at least one number and one letter
+    const hasLetter = /[a-zA-Z]/.test(newPassword);
+    const hasNumber = /[0-9]/.test(newPassword);
+    if (!hasLetter || !hasNumber) {
+      return NextResponse.json(
+        { error: "Password must contain at least one letter and one number" },
         { status: 400 }
       );
     }

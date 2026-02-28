@@ -6,7 +6,11 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const title = searchParams.get("title") || "The Night Manager";
   
-  const TMDB_API_KEY = process.env.TMDB_API_KEY || "8a8538af2a855e77e8c4a70a48a6447a";
+  const TMDB_API_KEY = process.env.TMDB_API_KEY;
+
+  if (!TMDB_API_KEY) {
+    return NextResponse.json({ success: false, error: "TMDB API key not configured" }, { status: 500 });
+  }
   
   const results: Record<string, unknown> = {
     apiKeyAvailable: !!TMDB_API_KEY,

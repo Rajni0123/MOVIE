@@ -1900,8 +1900,7 @@ function isDownloadUrl(url: string): boolean {
 
 // Search TMDB for movie data (backdrop, trailer, etc.)
 async function searchTMDBForMovie(title: string, year?: string): Promise<TMDBMovieData | null> {
-  // Try multiple ways to get API key
-  const TMDB_API_KEY = process.env.TMDB_API_KEY || "8a8538af2a855e77e8c4a70a48a6447a";
+  const TMDB_API_KEY = process.env.TMDB_API_KEY;
   
   console.log("=== TMDB SEARCH START ===");
   console.log("Title:", title);

@@ -90,8 +90,8 @@ export async function POST(request: NextRequest) {
     // Extract poster
     const posterUrl = extractPoster($, baseUrl);
 
-    // Extract download links - WorldFree4u specific patterns
-    const downloadLinks = extractWorldFree4uLinks($, baseUrl);
+    // Extract download links - WorldFree4u specific patterns (async - resolves redirects)
+    const downloadLinks = await extractWorldFree4uLinks($, baseUrl);
 
     console.log(`[WORLD SCRAPE] Found ${downloadLinks.length} download links`);
 
@@ -315,7 +315,101 @@ function extractPoster($: cheerio.CheerioAPI, baseUrl: string): string {
   return "";
 }
 
-function extractWorldFree4uLinks($: cheerio.CheerioAPI, baseUrl: string): { quality: string; language: string; url: string; source: string }[] {
+// Follow redirect links to get actual download URL
+async function resolveRedirectUrl(url: string): Promise<string> {
+  // Known redirect/shortener domains that need resolution
+  const redirectDomains = ["linkos.site", "link.clik.pw", "linksfire.co", "techymedies.com", "shrinkme", "za.gl", "ouo.io", "linksunlock"];
+
+  const isRedirect = redirectDomains.some(domain => url.includes(domain));
+  if (!isRedirect) return url;
+
+  console.log(`[WORLD SCRAPE] Resolving redirect: ${url}`);
+
+  try {
+    // First, try to fetch the redirect page
+    const response = await fetch(url, {
+      headers: {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+        "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+      },
+      redirect: "manual", // Don't auto-follow redirects
+    });
+
+    // Check for redirect in headers
+    const location = response.headers.get("location");
+    if (location && location.startsWith("http")) {
+      console.log(`[WORLD SCRAPE] Redirect header found: ${location}`);
+      return location;
+    }
+
+    // If no redirect header, parse the page for links
+    const html = await response.text();
+    const $ = cheerio.load(html);
+
+    // Look for actual download links in the page
+    const downloadPatterns = [
+      // Direct download links
+      'a[href*="gdrive"], a[href*="drive.google"]',
+      'a[href*="mega.nz"], a[href*="mega.co"]',
+      'a[href*="mediafire"]',
+      'a[href*="pixeldrain"]',
+      'a[href*="gofile"]',
+      'a[href*="streamtape"]',
+      'a[href*="doodstream"]',
+      'a[href*="mixdrop"]',
+      'a[href*="hubcloud"]',
+      'a[href*="gdflix"]',
+      'a[href*="filepress"]',
+      // Generic download button
+      'a.download-btn',
+      'a.btn-download',
+      'a[class*="download"]',
+      '#download a',
+      '.download-link a',
+    ];
+
+    for (const pattern of downloadPatterns) {
+      const link = $(pattern).first().attr("href");
+      if (link && link.startsWith("http") && !link.includes("linkos")) {
+        console.log(`[WORLD SCRAPE] Found actual link: ${link}`);
+        return link;
+      }
+    }
+
+    // Check for any external links
+    const allLinks: string[] = [];
+    $("a[href]").each((_, el) => {
+      const href = $(el).attr("href");
+      if (href && href.startsWith("http") &&
+          !href.includes("linkos") &&
+          !href.includes("worldfree4u") &&
+          !href.includes("facebook") &&
+          !href.includes("twitter") &&
+          !href.includes("telegram")) {
+        allLinks.push(href);
+      }
+    });
+
+    // Return first promising link
+    const goodHosts = ["gdrive", "drive.google", "mega", "mediafire", "pixeldrain", "gofile", "hubcloud", "gdflix", "filepress"];
+    for (const link of allLinks) {
+      if (goodHosts.some(host => link.includes(host))) {
+        console.log(`[WORLD SCRAPE] Found host link: ${link}`);
+        return link;
+      }
+    }
+
+    // Return original if nothing found
+    console.log(`[WORLD SCRAPE] No redirect found, keeping original`);
+    return url;
+
+  } catch (e) {
+    console.log(`[WORLD SCRAPE] Redirect resolution failed:`, e);
+    return url;
+  }
+}
+
+async function extractWorldFree4uLinks($: cheerio.CheerioAPI, baseUrl: string): Promise<{ quality: string; language: string; url: string; source: string }[]> {
   const links: { quality: string; language: string; url: string; source: string }[] = [];
   const seenUrls = new Set<string>();
 
@@ -398,8 +492,26 @@ function extractWorldFree4uLinks($: cheerio.CheerioAPI, baseUrl: string): { qual
     });
   });
 
-  console.log(`[WORLD SCRAPE] Extracted ${links.length} links`);
-  return links;
+  console.log(`[WORLD SCRAPE] Extracted ${links.length} raw links`);
+
+  // Resolve redirect URLs to get actual download links
+  const resolvedLinks: { quality: string; language: string; url: string; source: string }[] = [];
+
+  for (const link of links) {
+    try {
+      const resolvedUrl = await resolveRedirectUrl(link.url);
+      resolvedLinks.push({
+        ...link,
+        url: resolvedUrl,
+      });
+    } catch (e) {
+      // Keep original if resolution fails
+      resolvedLinks.push(link);
+    }
+  }
+
+  console.log(`[WORLD SCRAPE] Resolved ${resolvedLinks.length} links`);
+  return resolvedLinks;
 }
 
 function extractQualityFromText(text: string): string {

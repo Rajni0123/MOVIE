@@ -377,6 +377,27 @@ export default function UniversalScraperPage() {
         });
         const saveData = await saveRes.json();
 
+        // Handle duplicate movies - skip instead of error
+        if (saveRes.status === 409 && saveData.data?.existingId) {
+          // Movie already exists - mark as success (skipped)
+          setScrapingQueue(prev => {
+            const updated = [...prev];
+            updated[index] = {
+              ...updated[index],
+              status: "success",
+              savedId: saveData.data.existingId,
+              error: "Skipped - already exists"
+            };
+            return updated;
+          });
+          // Continue faster for skipped movies
+          setCurrentIndex(index + 1);
+          setTimeout(() => {
+            scrapeNextMovie(queue, index + 1);
+          }, 500);
+          return;
+        }
+
         if (saveData.success) {
           const movieId = saveData.data.id;
 

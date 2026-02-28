@@ -202,7 +202,7 @@ export function Header() {
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
       <div className="container flex h-14 items-center justify-between md:h-16">
         {/* Logo */}
-        <Link href="/" className="group flex items-center gap-2.5">
+        <Link href="/" className="group flex shrink-0 items-center gap-2">
           {settings.logoType === "image" && settings.logoUrl ? (
             <img
               src={settings.logoUrl}
@@ -218,18 +218,18 @@ export function Header() {
               {/* Animated Icon */}
               <div className="relative flex items-center justify-center">
                 {/* Ping animation ring */}
-                <span className="absolute h-8 w-8 animate-ping rounded-lg bg-primary/20" />
+                <span className="absolute h-7 w-7 animate-ping rounded-lg bg-primary/20" />
                 {/* Icon container */}
-                <div className="relative rounded-lg bg-primary p-1.5 shadow-lg shadow-primary/25 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3">
-                  <LogoIcon className="h-5 w-5 text-primary-foreground" />
+                <div className="relative rounded-lg bg-primary p-1 shadow-lg shadow-primary/25 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3">
+                  <LogoIcon className="h-4 w-4 text-primary-foreground" />
                 </div>
               </div>
               {/* Animated Text Logo */}
               <div className="flex items-baseline">
-                <span className="text-xl font-black tracking-tight text-foreground transition-all duration-300 group-hover:tracking-wide md:text-2xl">
+                <span className="text-lg font-extrabold italic tracking-tight text-foreground transition-all duration-300 group-hover:tracking-wide md:text-xl">
                   {(settings.logoText || settings.siteName).slice(0, 3)}
                 </span>
-                <span className="text-xl font-black tracking-tight text-primary transition-all duration-300 group-hover:tracking-wide md:text-2xl">
+                <span className="text-lg font-extrabold italic tracking-tight text-primary transition-all duration-300 group-hover:tracking-wide md:text-xl">
                   {(settings.logoText || settings.siteName).slice(3)}
                 </span>
               </div>
@@ -276,7 +276,7 @@ export function Header() {
         </nav>
 
         {/* Search */}
-        <div className="flex flex-1 items-center justify-end gap-2 ml-3 md:ml-0 md:flex-none">
+        <div className="flex flex-1 items-center justify-end gap-2 ml-4 md:ml-0 md:flex-none">
           {/* Mobile Search - Auto Expand */}
           <div ref={mobileSearchRef} className="relative flex-1 md:hidden">
             <form onSubmit={handleSearch}>

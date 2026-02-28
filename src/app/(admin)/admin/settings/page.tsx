@@ -22,6 +22,9 @@ import {
   Send,
   DollarSign,
   ExternalLink,
+  Globe2,
+  RefreshCw,
+  AlertTriangle,
 } from "lucide-react";
 
 interface SiteSettings {
@@ -43,6 +46,11 @@ interface SiteSettings {
   linkMonetizationEnabled: boolean;
   linkMonetizationUrl: string;
   linkMonetizationExcludeDomains: string;
+  // Domain Management
+  primaryDomain: string;
+  backupDomains: string;
+  oldDomains: string;
+  domainRedirectEnabled: boolean;
 }
 
 export default function SettingsPage() {
@@ -93,6 +101,11 @@ export default function SettingsPage() {
     linkMonetizationEnabled: false,
     linkMonetizationUrl: "",
     linkMonetizationExcludeDomains: "drive.google.com",
+    // Domain Management
+    primaryDomain: "",
+    backupDomains: "",
+    oldDomains: "",
+    domainRedirectEnabled: false,
   });
 
   useEffect(() => {
@@ -202,10 +215,13 @@ export default function SettingsPage() {
       const res = await fetch("/api/admin/settings", { credentials: "include" });
       const data = await res.json();
       if (data.success) {
-        // Convert string "true"/"false" to boolean for linkMonetizationEnabled
+        // Convert string "true"/"false" to boolean for toggle fields
         const processedData = { ...data.data };
         if (typeof processedData.linkMonetizationEnabled === "string") {
           processedData.linkMonetizationEnabled = processedData.linkMonetizationEnabled === "true";
+        }
+        if (typeof processedData.domainRedirectEnabled === "string") {
+          processedData.domainRedirectEnabled = processedData.domainRedirectEnabled === "true";
         }
         setSettings((prev) => ({ ...prev, ...processedData }));
       }
@@ -288,6 +304,7 @@ export default function SettingsPage() {
 
   const tabs = [
     { id: "general", label: "General", icon: Globe },
+    { id: "domains", label: "Domains", icon: Globe2 },
     { id: "logo", label: "Logo & Branding", icon: ImageIcon },
     { id: "social", label: "Social Links", icon: LinkIcon },
     { id: "monetization", label: "Link Monetization", icon: DollarSign },
@@ -418,6 +435,165 @@ export default function SettingsPage() {
                       placeholder="© 2024 MovPix. All rights reserved."
                     />
                   </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Domain Management */}
+            {activeTab === "domains" && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Globe2 className="h-5 w-5" />
+                    Domain Management
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {/* Warning Banner */}
+                  <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/10 p-4">
+                    <div className="flex items-start gap-3">
+                      <AlertTriangle className="h-5 w-5 text-yellow-500 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <p className="font-medium text-yellow-600">Quick Domain Switch</p>
+                        <p className="text-sm text-yellow-600/80 mt-1">
+                          Use this to quickly switch domains without downtime. When your domain gets blocked,
+                          just add it to &quot;Old Domains&quot; and set a new primary domain.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Enable Domain Redirect */}
+                  <div className="flex items-center justify-between rounded-lg border p-4">
+                    <div>
+                      <p className="font-medium">Enable Domain Redirect</p>
+                      <p className="text-sm text-muted-foreground">
+                        Redirect old domains to primary domain (301 redirect for SEO)
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setSettings({
+                        ...settings,
+                        domainRedirectEnabled: !settings.domainRedirectEnabled
+                      })}
+                      className={`relative h-6 w-11 rounded-full transition-colors ${
+                        settings.domainRedirectEnabled
+                          ? "bg-primary"
+                          : "bg-muted"
+                      }`}
+                    >
+                      <span
+                        className={`absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white transition-transform ${
+                          settings.domainRedirectEnabled ? "translate-x-5" : ""
+                        }`}
+                      />
+                    </button>
+                  </div>
+
+                  {/* Primary Domain */}
+                  <div>
+                    <label className="mb-1 block text-sm font-medium">
+                      Primary Domain *
+                    </label>
+                    <Input
+                      value={settings.primaryDomain}
+                      onChange={(e) => setSettings({ ...settings, primaryDomain: e.target.value })}
+                      placeholder="movpix.xyz"
+                    />
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Your main active domain (without https://)
+                    </p>
+                  </div>
+
+                  {/* Backup Domains */}
+                  <div>
+                    <label className="mb-1 block text-sm font-medium">
+                      Backup Domains
+                    </label>
+                    <Textarea
+                      value={settings.backupDomains}
+                      onChange={(e) => setSettings({ ...settings, backupDomains: e.target.value })}
+                      placeholder="movpix2.xyz&#10;movpix3.com&#10;movpix.net"
+                      rows={3}
+                    />
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      One domain per line. These domains will work alongside the primary domain.
+                    </p>
+                  </div>
+
+                  {/* Old Domains (for redirect) */}
+                  <div>
+                    <label className="mb-1 block text-sm font-medium">
+                      Old Domains (will redirect to primary)
+                    </label>
+                    <Textarea
+                      value={settings.oldDomains}
+                      onChange={(e) => setSettings({ ...settings, oldDomains: e.target.value })}
+                      placeholder="old-movpix.com&#10;blocked-domain.xyz"
+                      rows={3}
+                    />
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      One domain per line. When users visit these domains, they&apos;ll be redirected to the primary domain.
+                    </p>
+                  </div>
+
+                  {/* How it works */}
+                  <div className="rounded-lg border p-4">
+                    <p className="mb-3 font-medium flex items-center gap-2">
+                      <RefreshCw className="h-4 w-4" />
+                      How to Switch Domains
+                    </p>
+                    <ol className="space-y-2 text-sm text-muted-foreground list-decimal list-inside">
+                      <li>Point your new domain to server in Cloudflare DNS (A record → server IP)</li>
+                      <li>Add old/blocked domain to &quot;Old Domains&quot; list above</li>
+                      <li>Set new domain as &quot;Primary Domain&quot;</li>
+                      <li>Enable &quot;Domain Redirect&quot;</li>
+                      <li>Save settings - Done! Zero downtime switch.</li>
+                    </ol>
+                  </div>
+
+                  {/* Cloudflare Setup */}
+                  <div className="rounded-lg bg-blue-500/10 border border-blue-500/30 p-4">
+                    <p className="mb-2 font-medium text-blue-600">Cloudflare DNS Setup</p>
+                    <div className="space-y-1 text-sm text-blue-600/80">
+                      <p>For each domain, add these DNS records:</p>
+                      <code className="block bg-blue-500/10 rounded p-2 mt-2 font-mono text-xs">
+                        Type: A | Name: @ | Value: YOUR_SERVER_IP<br/>
+                        Type: A | Name: www | Value: YOUR_SERVER_IP
+                      </code>
+                      <p className="mt-2">Enable &quot;Proxy status&quot; (orange cloud) for DDoS protection.</p>
+                    </div>
+                  </div>
+
+                  {/* Status */}
+                  {settings.primaryDomain && (
+                    <div className="rounded-lg border p-4">
+                      <p className="mb-2 text-sm font-medium">Active Domains:</p>
+                      <div className="flex flex-wrap gap-2">
+                        <span className="rounded-full bg-green-500/10 border border-green-500/30 px-3 py-1 text-xs text-green-600">
+                          {settings.primaryDomain} (Primary)
+                        </span>
+                        {settings.backupDomains.split("\n").filter(Boolean).map((domain, i) => (
+                          <span key={i} className="rounded-full bg-blue-500/10 border border-blue-500/30 px-3 py-1 text-xs text-blue-600">
+                            {domain.trim()}
+                          </span>
+                        ))}
+                      </div>
+                      {settings.oldDomains && settings.domainRedirectEnabled && (
+                        <div className="mt-3">
+                          <p className="mb-2 text-sm font-medium text-muted-foreground">Redirecting from:</p>
+                          <div className="flex flex-wrap gap-2">
+                            {settings.oldDomains.split("\n").filter(Boolean).map((domain, i) => (
+                              <span key={i} className="rounded-full bg-orange-500/10 border border-orange-500/30 px-3 py-1 text-xs text-orange-600">
+                                {domain.trim()} → {settings.primaryDomain}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             )}

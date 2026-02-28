@@ -25,6 +25,11 @@ const DEFAULT_SETTINGS: Record<string, string> = {
   linkMonetizationEnabled: "false",
   linkMonetizationUrl: "",
   linkMonetizationExcludeDomains: "drive.google.com",
+  // Domain Management - Quick domain switch without downtime
+  primaryDomain: "",
+  backupDomains: "", // Comma-separated list of backup domains
+  oldDomains: "", // Comma-separated list of old domains that should redirect
+  domainRedirectEnabled: "false",
 };
 
 // GET /api/admin/settings - Get all settings

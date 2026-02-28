@@ -12,6 +12,21 @@ import { Plus, Search, Edit, Trash2, Eye, CheckSquare, Square, Loader2, Star } f
 import { formatDate } from "@/lib/utils";
 import { MovieWithRelations } from "@/types/movie";
 
+// Debounce hook for live search
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => clearTimeout(handler);
+  }, [value, delay]);
+
+  return debouncedValue;
+}
+
 export default function MoviesPage() {
   const [movies, setMovies] = useState<MovieWithRelations[]>([]);
   const [loading, setLoading] = useState(true);
@@ -19,17 +34,25 @@ export default function MoviesPage() {
   const [totalPages, setTotalPages] = useState(1);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
-  
+
+  // Debounced search for live search
+  const debouncedSearch = useDebounce(search, 300);
+
   // Bulk selection state
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [bulkLoading, setBulkLoading] = useState(false);
   const [totalDrafts, setTotalDrafts] = useState(0);
   const [allDraftIds, setAllDraftIds] = useState<number[]>([]);
 
+  // Fetch movies when page, status, or debounced search changes
   useEffect(() => {
     fetchMovies();
+  }, [page, statusFilter, debouncedSearch]);
+
+  // Fetch draft count on mount and status change
+  useEffect(() => {
     fetchDraftCount();
-  }, [page, statusFilter]);
+  }, [statusFilter]);
 
   // Fetch total draft count
   const fetchDraftCount = async () => {
@@ -118,20 +141,11 @@ export default function MoviesPage() {
     }
   };
 
-  const [searchTrigger, setSearchTrigger] = useState(0);
-
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
+    // Just reset page - search is already live via debounce
     setPage(1);
-    setSearchTrigger((t) => t + 1);
   };
-
-  // Trigger fetch when search is submitted
-  useEffect(() => {
-    if (searchTrigger > 0) {
-      fetchMovies();
-    }
-  }, [searchTrigger]);
 
   const handleDelete = async (id: number) => {
     if (!confirm("Are you sure you want to delete this movie?")) return;
@@ -398,11 +412,14 @@ export default function MoviesPage() {
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 type="search"
-                placeholder="Search movies..."
+                placeholder="Search movies... (live)"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="w-64 pl-9"
+                className="w-64 pl-9 pr-9"
               />
+              {loading && search && (
+                <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
+              )}
             </div>
             <Select
               value={statusFilter}
@@ -423,7 +440,6 @@ export default function MoviesPage() {
                 onClick={() => {
                   setSearch("");
                   setPage(1);
-                  setSearchTrigger((t) => t + 1);
                 }}
               >
                 Clear

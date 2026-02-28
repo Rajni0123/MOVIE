@@ -50,7 +50,6 @@ function useDebounce<T>(value: T, delay: number): T {
 export function Header() {
   const router = useRouter();
   const [search, setSearch] = useState("");
-  const [showSearch, setShowSearch] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const [results, setResults] = useState<SearchResult[]>([]);
   const [loading, setLoading] = useState(false);
@@ -131,7 +130,6 @@ export function Header() {
     e.preventDefault();
     if (search.trim()) {
       router.push(`/search?q=${encodeURIComponent(search)}`);
-      setShowSearch(false);
       setShowResults(false);
       setSearch("");
     }
@@ -140,7 +138,6 @@ export function Header() {
   const handleResultClick = (slug: string) => {
     router.push(`/movie/${slug}`);
     setShowResults(false);
-    setShowSearch(false);
     setSearch("");
   };
 
@@ -273,13 +270,23 @@ export function Header() {
 
         {/* Search */}
         <div className="flex items-center gap-2">
-          {/* Mobile Search Toggle */}
-          <button
-            onClick={() => setShowSearch(!showSearch)}
-            className="rounded-full p-2 hover:bg-muted md:hidden"
-          >
-            {showSearch ? <X className="h-5 w-5" /> : <Search className="h-5 w-5" />}
-          </button>
+          {/* Mobile Search - Small Input */}
+          <div ref={mobileSearchRef} className="relative md:hidden">
+            <form onSubmit={handleSearch}>
+              <div className="relative">
+                <Search className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  type="search"
+                  placeholder="Search..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  onFocus={() => results.length > 0 && setShowResults(true)}
+                  className="h-8 w-28 pl-7 pr-2 text-sm"
+                />
+              </div>
+            </form>
+            {showResults && <SearchDropdown />}
+          </div>
 
           {/* Desktop Search */}
           <div ref={searchRef} className="relative hidden md:block">
@@ -304,29 +311,6 @@ export function Header() {
         </div>
       </div>
 
-      {/* Mobile Search Bar */}
-      {showSearch && (
-        <div ref={mobileSearchRef} className="relative border-t p-3 md:hidden">
-          <form onSubmit={handleSearch}>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                type="search"
-                placeholder="Search movies..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                onFocus={() => results.length > 0 && setShowResults(true)}
-                className="w-full pl-9"
-                autoFocus
-              />
-              {loading && (
-                <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
-              )}
-            </div>
-          </form>
-          {showResults && <SearchDropdown />}
-        </div>
-      )}
     </header>
   );
 }

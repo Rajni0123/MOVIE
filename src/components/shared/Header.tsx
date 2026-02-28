@@ -276,19 +276,19 @@ export function Header() {
         </nav>
 
         {/* Search */}
-        <div className="flex items-center gap-2">
-          {/* Mobile Search - Small Input */}
-          <div ref={mobileSearchRef} className="relative md:hidden">
+        <div className="flex flex-1 items-center justify-end gap-2 ml-3 md:ml-0 md:flex-none">
+          {/* Mobile Search - Auto Expand */}
+          <div ref={mobileSearchRef} className="relative flex-1 md:hidden">
             <form onSubmit={handleSearch}>
               <div className="relative">
-                <Search className="absolute left-2 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   type="search"
-                  placeholder="Search..."
+                  placeholder="Search movies..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   onFocus={() => results.length > 0 && setShowResults(true)}
-                  className="h-8 w-28 pl-7 pr-2 text-sm"
+                  className="h-9 w-full pl-9 pr-3 text-sm"
                 />
               </div>
             </form>

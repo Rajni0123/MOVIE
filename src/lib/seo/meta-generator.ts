@@ -63,21 +63,50 @@ export function generateMovieKeywords(movie: Movie, genres: string[] = []): stri
 
 /**
  * Generate metadata for a movie page
+ * Title format: "Movie Name (Year) Download - 480p, 720p, 1080p HD"
+ * This format is optimized for:
+ * - Click-through rate (CTR)
+ * - Keyword targeting (download, quality options)
+ * - Search intent matching
  */
 export function generateMovieMetadata(movie: Movie, genres: string[] = []): Metadata {
   const year = movie.releaseDate ? new Date(movie.releaseDate).getFullYear() : "";
-  const title = movie.metaTitle || `Download ${movie.title}${year ? ` (${year})` : ""} - Full Movie HD | ${SITE_NAME}`;
-  const description = movie.metaDescription || 
-    `Download ${movie.title}${year ? ` (${year})` : ""} full movie for free in HD quality (480p, 720p, 1080p). ${movie.description?.slice(0, 100) || `Watch ${movie.title} online free.`}`;
-  
+  const currentYear = new Date().getFullYear();
+
+  // Clean title - remove existing year in parentheses to avoid duplication
+  const cleanTitle = movie.title
+    .replace(/\s*\(\d{4}\)\s*/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  // Get primary genre for description
+  const primaryGenre = genres.length > 0 ? genres[0] : "Movie";
+
+  // SEO-optimized title (without site name - template adds it)
+  // Format: "Movie Name (Year) Download - 480p, 720p, 1080p HD"
+  const title = movie.metaTitle ||
+    `${cleanTitle}${year ? ` (${year})` : ""} Download - 480p, 720p, 1080p HD`;
+
+  // SEO-optimized description with call-to-action
+  // Includes: Movie name, year, quality options, genres, and CTA
+  const shortDesc = movie.description
+    ? movie.description.slice(0, 80).trim() + "..."
+    : "";
+
+  const description = movie.metaDescription ||
+    `⬇️ Download ${cleanTitle}${year ? ` (${year})` : ""} full ${primaryGenre} movie in HD quality. Available in 480p, 720p, 1080p. ${shortDesc} Fast & free download links!`;
+
+  // Full title with site name for OG/Twitter (these don't use template)
+  const fullTitle = `${title} | ${SITE_NAME}`;
+
   const keywords = generateMovieKeywords(movie, genres);
 
   return {
-    title,
+    title, // Template will add "| MovPix"
     description,
     keywords: keywords.join(", "),
     openGraph: {
-      title,
+      title: fullTitle,
       description,
       type: "video.movie",
       url: `${SITE_URL}/movie/${movie.slug}`,
@@ -87,13 +116,13 @@ export function generateMovieMetadata(movie: Movie, genres: string[] = []): Meta
           url: movie.posterUrl,
           width: 500,
           height: 750,
-          alt: `${movie.title} Poster`,
+          alt: `${cleanTitle}${year ? ` (${year})` : ""} Movie Poster - Download HD`,
         },
       ] : [],
     },
     twitter: {
       card: "summary_large_image",
-      title,
+      title: fullTitle,
       description,
       images: movie.posterUrl ? [movie.posterUrl] : [],
     },
@@ -105,6 +134,7 @@ export function generateMovieMetadata(movie: Movie, genres: string[] = []): Meta
 
 /**
  * Generate metadata for the homepage
+ * Optimized for high CTR and keyword targeting
  */
 export function generateHomeMetadata(): Metadata {
   const currentYear = new Date().getFullYear();
@@ -113,26 +143,36 @@ export function generateHomeMetadata(): Metadata {
     "free movie download",
     "HD movies download",
     "latest movies download",
-    `${currentYear} movies`,
-    "480p movies",
-    "720p movies",
-    "1080p movies",
+    `${currentYear} movies download`,
+    `new movies ${currentYear}`,
+    "480p movies download",
+    "720p movies download",
+    "1080p movies download",
     "dual audio movies",
     "Hindi movies download",
     "English movies download",
-    "Hollywood movies",
-    "Bollywood movies",
+    "Hollywood movies download",
+    "Bollywood movies download",
     "free HD movies",
     "movie download site",
+    "watch movies online free",
+    "latest Hollywood movies",
+    "latest Bollywood movies",
   ].join(", ");
 
+  // Homepage title without site name (template adds it)
+  const title = `Download Latest Movies Free - HD 480p 720p 1080p ${currentYear}`;
+  const fullTitle = `${SITE_NAME} - ${title}`;
+
+  const description = `⬇️ Download latest Bollywood & Hollywood movies FREE in HD quality (480p, 720p, 1080p). New ${currentYear} releases updated daily. Fast download links, no signup required!`;
+
   return {
-    title: `${SITE_NAME} - Download Movies Free HD 480p 720p 1080p`,
-    description: `Download latest movies for free in HD quality. Get 480p, 720p, 1080p movies with fast download links. Best free movie download site ${currentYear}.`,
+    title: fullTitle, // Full title for homepage
+    description,
     keywords,
     openGraph: {
-      title: `${SITE_NAME} - Download Movies Free HD`,
-      description: `Download latest movies for free in HD quality. 480p, 720p, 1080p available.`,
+      title: fullTitle,
+      description,
       type: "website",
       url: SITE_URL,
       siteName: SITE_NAME,
@@ -141,14 +181,14 @@ export function generateHomeMetadata(): Metadata {
           url: `${SITE_URL}/icon-512.png`,
           width: 1200,
           height: 630,
-          alt: `${SITE_NAME} - Free Movie Downloads`,
+          alt: `${SITE_NAME} - Free HD Movie Downloads ${currentYear}`,
         },
       ],
     },
     twitter: {
       card: "summary_large_image",
-      title: `${SITE_NAME} - Download Movies Free HD`,
-      description: `Download latest movies for free in HD quality.`,
+      title: fullTitle,
+      description,
       images: [`${SITE_URL}/icon-512.png`],
     },
     alternates: {
@@ -159,6 +199,7 @@ export function generateHomeMetadata(): Metadata {
 
 /**
  * Generate metadata for year page
+ * Optimized for year-specific movie searches
  */
 export function generateYearMetadata(year: number): Metadata {
   const keywords = [
@@ -173,15 +214,25 @@ export function generateYearMetadata(year: number): Metadata {
     `${year} movies 480p`,
     `${year} movies 720p`,
     `${year} movies 1080p`,
+    `new movies ${year}`,
+    `${year} movie download`,
+    `${year} Hindi movies`,
+    `${year} English movies`,
   ].join(", ");
 
+  // Title without site name (template adds it)
+  const title = `${year} Movies Download - Latest HD 480p 720p 1080p`;
+  const fullTitle = `${title} | ${SITE_NAME}`;
+
+  const description = `⬇️ Download ${year} movies FREE in HD quality. Best ${year} Bollywood & Hollywood releases in 480p, 720p, 1080p. Updated collection with fast download links!`;
+
   return {
-    title: `${year} Movies - Download Free HD Movies | ${SITE_NAME}`,
-    description: `Browse and download ${year} movies for free in HD quality (480p, 720p, 1080p). Find the best movies released in ${year}.`,
+    title,
+    description,
     keywords,
     openGraph: {
-      title: `${year} Movies - Download Free HD Movies | ${SITE_NAME}`,
-      description: `Browse and download ${year} movies for free in HD quality (480p, 720p, 1080p).`,
+      title: fullTitle,
+      description,
       type: "website",
       url: `${SITE_URL}/years/${year}`,
       siteName: SITE_NAME,
@@ -190,14 +241,14 @@ export function generateYearMetadata(year: number): Metadata {
           url: `${SITE_URL}/icon-512.png`,
           width: 1200,
           height: 630,
-          alt: `${year} Movies - ${SITE_NAME}`,
+          alt: `${year} Movies Download - ${SITE_NAME}`,
         },
       ],
     },
     twitter: {
       card: "summary_large_image",
-      title: `${year} Movies - Download Free HD Movies`,
-      description: `Browse and download ${year} movies for free in HD quality.`,
+      title: fullTitle,
+      description,
       images: [`${SITE_URL}/icon-512.png`],
     },
     alternates: {
@@ -208,6 +259,7 @@ export function generateYearMetadata(year: number): Metadata {
 
 /**
  * Generate metadata for trending page
+ * Optimized for viral/trending searches
  */
 export function generateTrendingMetadata(): Metadata {
   const currentYear = new Date().getFullYear();
@@ -220,15 +272,24 @@ export function generateTrendingMetadata(): Metadata {
     "most downloaded movies",
     "viral movies",
     "hot movies download",
+    "new releases",
+    `latest movies ${currentYear}`,
+    "box office hits",
   ].join(", ");
 
+  // Title without site name (template adds it)
+  const title = `Trending Movies Download - Viral HD ${currentYear}`;
+  const fullTitle = `${title} | ${SITE_NAME}`;
+
+  const description = `🔥 Download trending & viral movies FREE in HD. Hottest ${currentYear} releases everyone is watching! 480p, 720p, 1080p with fast download links!`;
+
   return {
-    title: `Trending Movies - Download Popular Movies Free | ${SITE_NAME}`,
-    description: `Download trending and most popular movies for free in HD quality. Get the hottest movies everyone is watching.`,
+    title,
+    description,
     keywords,
     openGraph: {
-      title: `Trending Movies - Download Popular Movies Free | ${SITE_NAME}`,
-      description: `Download trending and most popular movies for free in HD quality.`,
+      title: fullTitle,
+      description,
       type: "website",
       url: `${SITE_URL}/trending`,
       siteName: SITE_NAME,
@@ -237,14 +298,14 @@ export function generateTrendingMetadata(): Metadata {
           url: `${SITE_URL}/icon-512.png`,
           width: 1200,
           height: 630,
-          alt: `Trending Movies - ${SITE_NAME}`,
+          alt: `Trending Movies Download - ${SITE_NAME}`,
         },
       ],
     },
     twitter: {
       card: "summary_large_image",
-      title: `Trending Movies - Download Popular Movies Free`,
-      description: `Download trending and most popular movies for free in HD quality.`,
+      title: fullTitle,
+      description,
       images: [`${SITE_URL}/icon-512.png`],
     },
     alternates: {
@@ -255,6 +316,7 @@ export function generateTrendingMetadata(): Metadata {
 
 /**
  * Generate metadata for movies listing page
+ * Optimized for browsing/collection searches
  */
 export function generateMoviesListMetadata(): Metadata {
   const currentYear = new Date().getFullYear();
@@ -267,15 +329,26 @@ export function generateMoviesListMetadata(): Metadata {
     "download movies",
     "free movie download site",
     "480p 720p 1080p movies",
+    "latest movies download",
+    "new movie releases",
+    "Hollywood movies",
+    "Bollywood movies",
+    "movie download website",
   ].join(", ");
 
+  // Title without site name (template adds it)
+  const title = `All Movies Download - Latest HD Collection ${currentYear}`;
+  const fullTitle = `${title} | ${SITE_NAME}`;
+
+  const description = `⬇️ Browse & download all movies FREE in HD quality. 1000+ Bollywood & Hollywood movies in 480p, 720p, 1080p. Updated daily with new ${currentYear} releases!`;
+
   return {
-    title: `All Movies - Download Free HD Movies | ${SITE_NAME}`,
-    description: `Browse our complete collection of movies. Download any movie for free in HD quality (480p, 720p, 1080p).`,
+    title,
+    description,
     keywords,
     openGraph: {
-      title: `All Movies - Download Free HD Movies | ${SITE_NAME}`,
-      description: `Browse our complete collection of movies. Download any movie for free in HD quality.`,
+      title: fullTitle,
+      description,
       type: "website",
       url: `${SITE_URL}/movies`,
       siteName: SITE_NAME,
@@ -284,14 +357,14 @@ export function generateMoviesListMetadata(): Metadata {
           url: `${SITE_URL}/icon-512.png`,
           width: 1200,
           height: 630,
-          alt: `All Movies - ${SITE_NAME}`,
+          alt: `All Movies Download - ${SITE_NAME}`,
         },
       ],
     },
     twitter: {
       card: "summary_large_image",
-      title: `All Movies - Download Free HD Movies`,
-      description: `Browse our complete collection of movies. Download any movie for free in HD quality.`,
+      title: fullTitle,
+      description,
       images: [`${SITE_URL}/icon-512.png`],
     },
     alternates: {
@@ -302,6 +375,7 @@ export function generateMoviesListMetadata(): Metadata {
 
 /**
  * Generate metadata for genre page
+ * Optimized for genre-specific searches
  */
 export function generateGenreMetadata(genre: string): Metadata {
   const currentYear = new Date().getFullYear();
@@ -317,15 +391,25 @@ export function generateGenreMetadata(genre: string): Metadata {
     `${genre} movies 480p`,
     `${genre} movies 720p`,
     `${genre} movies 1080p`,
+    `top ${genre} movies`,
+    `${genre} movies Hindi`,
+    `${genre} movies English`,
+    `new ${genre} movies ${currentYear}`,
   ].join(", ");
 
+  // Title without site name (template adds it)
+  const title = `${capitalizedGenre} Movies Download - Best HD 480p 720p 1080p`;
+  const fullTitle = `${title} | ${SITE_NAME}`;
+
+  const description = `⬇️ Download best ${capitalizedGenre} movies FREE in HD quality. Latest ${currentYear} ${genre} films in 480p, 720p, 1080p. Hollywood & Bollywood ${genre} movies with fast links!`;
+
   return {
-    title: `${capitalizedGenre} Movies - Download Free HD Movies | ${SITE_NAME}`,
-    description: `Browse and download ${genre} movies for free in HD quality (480p, 720p, 1080p). Find the best ${genre} movies.`,
+    title,
+    description,
     keywords,
     openGraph: {
-      title: `${capitalizedGenre} Movies - Download Free HD Movies | ${SITE_NAME}`,
-      description: `Browse and download ${genre} movies for free in HD quality (480p, 720p, 1080p).`,
+      title: fullTitle,
+      description,
       type: "website",
       url: `${SITE_URL}/genres/${genre.toLowerCase()}`,
       siteName: SITE_NAME,
@@ -334,14 +418,14 @@ export function generateGenreMetadata(genre: string): Metadata {
           url: `${SITE_URL}/icon-512.png`,
           width: 1200,
           height: 630,
-          alt: `${capitalizedGenre} Movies - ${SITE_NAME}`,
+          alt: `${capitalizedGenre} Movies Download - ${SITE_NAME}`,
         },
       ],
     },
     twitter: {
       card: "summary_large_image",
-      title: `${capitalizedGenre} Movies - Download Free HD Movies`,
-      description: `Browse and download ${genre} movies for free in HD quality.`,
+      title: fullTitle,
+      description,
       images: [`${SITE_URL}/icon-512.png`],
     },
     alternates: {
@@ -384,6 +468,7 @@ export function generateSearchMetadata(query?: string): Metadata {
 
 /**
  * Generate metadata for popular page
+ * Optimized for trending/popular searches
  */
 export function generatePopularMetadata(): Metadata {
   const currentYear = new Date().getFullYear();
@@ -395,15 +480,26 @@ export function generatePopularMetadata(): Metadata {
     `popular movies ${currentYear}`,
     "highest rated movies",
     "fan favorite movies",
+    "trending movies download",
+    "top rated movies",
+    "blockbuster movies",
+    `best movies ${currentYear}`,
+    "IMDb top movies",
   ].join(", ");
 
+  // Title without site name (template adds it)
+  const title = `Popular Movies Download - Top Rated HD ${currentYear}`;
+  const fullTitle = `${title} | ${SITE_NAME}`;
+
+  const description = `🔥 Download most popular & trending movies FREE in HD. Top-rated ${currentYear} blockbusters in 480p, 720p, 1080p. IMDb highest rated movies with fast download links!`;
+
   return {
-    title: `Popular Movies - Most Watched Movies | ${SITE_NAME}`,
-    description: `Download the most popular and watched movies for free in HD quality. Discover fan favorites and top-rated films.`,
+    title,
+    description,
     keywords,
     openGraph: {
-      title: `Popular Movies - Most Watched Movies | ${SITE_NAME}`,
-      description: `Download the most popular and watched movies for free in HD quality.`,
+      title: fullTitle,
+      description,
       type: "website",
       url: `${SITE_URL}/popular`,
       siteName: SITE_NAME,
@@ -412,14 +508,14 @@ export function generatePopularMetadata(): Metadata {
           url: `${SITE_URL}/icon-512.png`,
           width: 1200,
           height: 630,
-          alt: `Popular Movies - ${SITE_NAME}`,
+          alt: `Popular Movies Download - ${SITE_NAME}`,
         },
       ],
     },
     twitter: {
       card: "summary_large_image",
-      title: `Popular Movies - Most Watched Movies`,
-      description: `Download the most popular and watched movies for free in HD quality.`,
+      title: fullTitle,
+      description,
       images: [`${SITE_URL}/icon-512.png`],
     },
     alternates: {
@@ -430,17 +526,21 @@ export function generatePopularMetadata(): Metadata {
 
 /**
  * Generate default metadata
+ * This sets up the base configuration for all pages
  */
 export function generateDefaultMetadata(): Metadata {
   const currentYear = new Date().getFullYear();
   return {
     metadataBase: new URL(SITE_URL),
     title: {
-      default: `${SITE_NAME} - Free Movie Downloads`,
+      default: `${SITE_NAME} - Download Free HD Movies 480p 720p 1080p`,
       template: `%s | ${SITE_NAME}`,
     },
-    description: `Discover and download movies for free with ${SITE_NAME}. HD quality 480p, 720p, 1080p available.`,
-    keywords: `free movies, download movies, HD movies, ${currentYear} movies, movie download site`,
+    description: `⬇️ Download latest movies FREE in HD quality. Bollywood, Hollywood, South movies in 480p, 720p, 1080p. Fast download links, updated daily ${currentYear}!`,
+    keywords: `free movies, download movies, HD movies, ${currentYear} movies, movie download site, free movie download, 480p movies, 720p movies, 1080p movies, Bollywood movies, Hollywood movies`,
+    authors: [{ name: SITE_NAME }],
+    creator: SITE_NAME,
+    publisher: SITE_NAME,
     robots: {
       index: true,
       follow: true,
@@ -455,6 +555,11 @@ export function generateDefaultMetadata(): Metadata {
     verification: {
       // Add your verification codes here
       // google: "your-google-verification-code",
+    },
+    other: {
+      "revisit-after": "1 day",
+      "distribution": "global",
+      "rating": "general",
     },
   };
 }

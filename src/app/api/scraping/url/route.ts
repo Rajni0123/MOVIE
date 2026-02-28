@@ -1075,6 +1075,22 @@ function extractDownloadLinks($: cheerio.CheerioAPI, baseUrl: string): { quality
     // WorldFree4u and similar sites
     "linkos.site", "linkos", "shrinkme.io", "link.vip", "shrink.pe",
     "myimg.click", "imgshare", "howfly", "adrinolinks", "earnlink",
+    // New popular file hosts (2024-2025)
+    "fastupload", "uploadever", "uploadhub", "uploadcloud", "uploadboy",
+    "uppit", "uptostream", "vidoza", "vidlox", "voe.sx", "vudeo",
+    "wolfstream", "abcvideo", "cloudvideo", "evoload", "fastdrive",
+    "gdsharer", "gdrivecdn", "filescdn", "filecloud", "filedot",
+    "filefox", "filenext", "filer", "uploadrar", "uploadhero",
+    "dutchycorp", "shrinkurl", "shortzon", "earnl.ink", "link1s",
+    // Additional shorteners used by Hindi movie sites
+    "atglinks", "ez4short", "droplink", "adrinolinks", "indianshortner",
+    "shortingly", "shrtfly", "urlty", "bitshort", "urlshortx",
+    // New cloud drives
+    "hubfiles", "hubcloud", "hubdrive", "gdbot", "gdplayer",
+    "player.gdtot", "gdtot.nl", "gdtot.cfd", "new.gdtot",
+    // Direct download indicators
+    "/gdtot/", "/gdflix/", "/gdrive/", "/download/", "/dl/",
+    "?id=", "&id=", "/file/", "/d/", "/u/0/uc",
   ];
   
   $("a").each((_, el) => {
@@ -1134,20 +1150,72 @@ function extractDownloadLinks($: cheerio.CheerioAPI, baseUrl: string): { quality
     const onclick = $(el).attr("onclick") || "";
     const text = $(el).text().trim();
     const parentText = $(el).parent().text().trim();
-    
+
     // Extract URL from onclick if present
     const urlMatch = onclick.match(/['"]((https?:\/\/|\/)[^'"]+)['"]/);
     const href = dataHref || (urlMatch ? urlMatch[1] : "");
-    
+
     if (href && (text.toLowerCase().includes("download") || text.match(/\d{3,4}p/))) {
       addLink(href, text, parentText);
     }
   });
 
+  // AGGRESSIVE METHOD 5: If still few links, look for ANY external links with quality or file indicators
+  if (links.length < 3) {
+    console.log("Few links found, using aggressive external link detection...");
+    $("a").each((_, el) => {
+      const href = $(el).attr("href") || "";
+      if (!href || !href.startsWith("http")) return;
+      if (isSourceWebsiteUrl(href)) return;
+
+      const text = $(el).text().trim();
+      const parentText = $(el).parent().text().trim();
+      const combined = (text + " " + parentText).toLowerCase();
+
+      // Look for quality indicators, file sizes, or download-related text
+      const hasQuality = /\d{3,4}[pP]|4[kK]|hdrip|webrip|bluray|brrip|dvdrip/i.test(combined);
+      const hasFileSize = /\d+(?:\.\d+)?\s*(gb|mb)/i.test(combined);
+      const hasDownloadText = /(download|click here|get link|direct link|fast server|slow server)/i.test(combined);
+
+      if (hasQuality || hasFileSize || hasDownloadText) {
+        console.log(`Found external link via aggressive detection: ${text.slice(0, 40)}... -> ${href.slice(0, 50)}...`);
+        addLink(href, text, parentText);
+      }
+    });
+  }
+
+  // AGGRESSIVE METHOD 6: Last resort - find all links inside paragraph or div with "download" text
+  if (links.length < 3) {
+    console.log("Still few links, checking paragraphs/divs with download text...");
+    $("p, div").each((_, container) => {
+      const containerText = $(container).text().toLowerCase();
+      if (!containerText.includes("download") && !containerText.includes("link")) return;
+
+      $(container).find("a").each((_, el) => {
+        const href = $(el).attr("href") || "";
+        if (!href || !href.startsWith("http")) return;
+        if (isSourceWebsiteUrl(href)) return;
+
+        const text = $(el).text().trim();
+        const parentText = $(el).parent().text().trim();
+
+        // Skip social media and known non-download links
+        const lowerHref = href.toLowerCase();
+        if (lowerHref.includes("facebook") || lowerHref.includes("twitter") ||
+            lowerHref.includes("telegram") || lowerHref.includes("instagram") ||
+            lowerHref.includes("youtube") || lowerHref.includes("imdb")) return;
+
+        console.log(`Found link in download container: ${text.slice(0, 40)}... -> ${href.slice(0, 50)}...`);
+        addLink(href, text, parentText);
+      });
+    });
+  }
+
   // Sort by quality (480p first, then 720p, then 1080p, then 4K)
   const qualityOrder: Record<string, number> = { "480p": 1, "720p": 2, "1080p": 3, "4K": 4 };
   links.sort((a, b) => (qualityOrder[a.quality] || 2) - (qualityOrder[b.quality] || 2));
 
+  console.log(`Total download links found: ${links.length}`);
   return links.slice(0, 50); // Return up to 50 links
 }
 

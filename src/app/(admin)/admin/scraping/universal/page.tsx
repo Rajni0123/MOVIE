@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Header } from "@/components/admin/Header";
@@ -80,6 +80,12 @@ export default function UniversalScraperPage() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedYear, setSelectedYear] = useState<string | null>(null);
   const [skipDuplicates, setSkipDuplicates] = useState(true);
+
+  // Ref to always get current skipDuplicates value (fixes closure issue)
+  const skipDuplicatesRef = useRef(skipDuplicates);
+  useEffect(() => {
+    skipDuplicatesRef.current = skipDuplicates;
+  }, [skipDuplicates]);
 
   // Discovery state
   const [discovering, setDiscovering] = useState(false);
@@ -393,8 +399,9 @@ export default function UniversalScraperPage() {
       return updated;
     });
 
-    // Pre-check for duplicates (if enabled)
-    if (skipDuplicates) {
+    // Pre-check for duplicates (if enabled) - use ref to get current value
+    console.log('[Scraper] Skip duplicates enabled:', skipDuplicatesRef.current);
+    if (skipDuplicatesRef.current) {
       const isDuplicate = await checkDuplicateMovie(queue[index].title);
       if (isDuplicate) {
         setScrapingQueue(prev => {

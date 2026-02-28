@@ -218,18 +218,18 @@ export function Header() {
               {/* Animated Icon */}
               <div className="relative flex items-center justify-center">
                 {/* Ping animation ring */}
-                <span className="absolute h-7 w-7 animate-ping rounded-lg bg-primary/20" />
+                <span className="absolute h-8 w-8 animate-ping rounded-lg bg-primary/20" />
                 {/* Icon container */}
-                <div className="relative rounded-lg bg-primary p-1 shadow-lg shadow-primary/25 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3">
-                  <LogoIcon className="h-4 w-4 text-primary-foreground" />
+                <div className="relative rounded-lg bg-primary p-1.5 shadow-lg shadow-primary/25 transition-transform duration-300 group-hover:scale-110 group-hover:rotate-3">
+                  <LogoIcon className="h-5 w-5 text-primary-foreground" />
                 </div>
               </div>
               {/* Animated Text Logo */}
               <div className="flex items-baseline">
-                <span className="text-lg font-extrabold italic tracking-tight text-foreground transition-all duration-300 group-hover:tracking-wide md:text-xl">
+                <span className="text-xl font-extrabold italic tracking-tight text-foreground transition-all duration-300 group-hover:tracking-wide md:text-2xl">
                   {(settings.logoText || settings.siteName).slice(0, 3)}
                 </span>
-                <span className="text-lg font-extrabold italic tracking-tight text-primary transition-all duration-300 group-hover:tracking-wide md:text-xl">
+                <span className="text-xl font-extrabold italic tracking-tight text-primary transition-all duration-300 group-hover:tracking-wide md:text-2xl">
                   {(settings.logoText || settings.siteName).slice(3)}
                 </span>
               </div>
@@ -278,17 +278,17 @@ export function Header() {
         {/* Search */}
         <div className="flex flex-1 items-center justify-end gap-2 ml-4 md:ml-0 md:flex-none">
           {/* Mobile Search - Auto Expand */}
-          <div ref={mobileSearchRef} className="relative flex-1 md:hidden">
+          <div ref={mobileSearchRef} className="relative flex-1 max-w-[180px] md:hidden">
             <form onSubmit={handleSearch}>
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
                 <Input
                   type="search"
-                  placeholder="Search movies..."
+                  placeholder="Search..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   onFocus={() => results.length > 0 && setShowResults(true)}
-                  className="h-9 w-full pl-9 pr-3 text-sm"
+                  className="h-8 w-full pl-8 pr-2 text-xs"
                 />
               </div>
             </form>

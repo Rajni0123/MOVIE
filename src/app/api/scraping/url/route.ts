@@ -1150,12 +1150,22 @@ function extractDownloadLinks($: cheerio.CheerioAPI, baseUrl: string): { quality
   
   // AGGRESSIVE METHOD 3: Look inside common download containers
   const containerSelectors = [
-    ".download-links", ".download-box", ".download-section", ".download-buttons",
+    ".download-container", ".download-links", ".download-box", ".download-section", ".download-buttons",
     ".downloadlinks", ".dlink", ".dl-box", ".dl-link", ".download",
     '[class*="download"]', '[id*="download"]', ".entry-content", ".post-content",
     ".content", "article", ".single-content", ".movie-info", ".movie-download",
     "table", ".wp-block-table", ".links-table", "#links", ".links",
+    ".wp-content", "#info", ".sbox", // hdmovig2 specific
   ];
+
+  // SPECIAL: Handle buttons inside anchor tags (hdmovig2 pattern)
+  $("a").has("button.download-button, .download-button").each((_, el) => {
+    const href = $(el).attr("href") || "";
+    const buttonText = $(el).find("button").text().trim() || $(el).text().trim();
+    if (href) {
+      addLink(href, buttonText, "");
+    }
+  });
   
   for (const selector of containerSelectors) {
     try {

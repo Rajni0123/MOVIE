@@ -2,10 +2,28 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/db/prisma";
 import { hashPassword } from "@/lib/auth";
 import { ApiResponse } from "@/types/api";
+import { checkRateLimit, getClientIP, RATE_LIMITS } from "@/lib/security/rate-limiter";
 
 // POST /api/auth/forgot-password - Generate new password for admin
 export async function POST(request: NextRequest) {
   try {
+    // Rate limiting check - stricter for forgot password
+    const clientIP = getClientIP(request);
+    const rateLimit = checkRateLimit(clientIP, RATE_LIMITS.forgotPassword);
+
+    if (!rateLimit.allowed) {
+      return NextResponse.json<ApiResponse>(
+        {
+          success: false,
+          error: `Too many password reset attempts. Try again later.`
+        },
+        {
+          status: 429,
+          headers: { "Retry-After": String(rateLimit.retryAfter) }
+        }
+      );
+    }
+
     const body = await request.json();
     const { email } = body;
 

@@ -2,9 +2,32 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/db/prisma";
 import { verifyPassword, generateToken } from "@/lib/auth";
 import { ApiResponse, LoginResponse } from "@/types/api";
+import { checkRateLimit, getClientIP, RATE_LIMITS } from "@/lib/security/rate-limiter";
+import { logLogin } from "@/lib/security/audit-logger";
 
 export async function POST(request: NextRequest) {
   try {
+    // Rate limiting check
+    const clientIP = getClientIP(request);
+    const rateLimit = checkRateLimit(clientIP, RATE_LIMITS.login);
+
+    if (!rateLimit.allowed) {
+      return NextResponse.json<ApiResponse>(
+        {
+          success: false,
+          error: `Too many login attempts. Try again in ${rateLimit.retryAfter} seconds.`
+        },
+        {
+          status: 429,
+          headers: {
+            "Retry-After": String(rateLimit.retryAfter),
+            "X-RateLimit-Remaining": "0",
+            "X-RateLimit-Reset": String(rateLimit.resetAt),
+          }
+        }
+      );
+    }
+
     const body = await request.json();
     const { email, password } = body;
 
@@ -20,6 +43,8 @@ export async function POST(request: NextRequest) {
     });
 
     if (!user) {
+      // Log failed login attempt
+      logLogin(0, email, false, request);
       return NextResponse.json<ApiResponse>(
         { success: false, error: "Invalid email or password" },
         { status: 401 }
@@ -27,6 +52,7 @@ export async function POST(request: NextRequest) {
     }
 
     if (!user.isActive) {
+      logLogin(user.id, email, false, request);
       return NextResponse.json<ApiResponse>(
         { success: false, error: "Account is deactivated" },
         { status: 401 }
@@ -36,6 +62,8 @@ export async function POST(request: NextRequest) {
     const isValidPassword = await verifyPassword(password, user.passwordHash);
 
     if (!isValidPassword) {
+      // Log failed login attempt
+      logLogin(user.id, email, false, request);
       return NextResponse.json<ApiResponse>(
         { success: false, error: "Invalid email or password" },
         { status: 401 }
@@ -47,6 +75,9 @@ export async function POST(request: NextRequest) {
       where: { id: user.id },
       data: { lastLoginAt: new Date() },
     });
+
+    // Log successful login
+    logLogin(user.id, user.email, true, request);
 
     const token = generateToken(user.id, user.email);
 

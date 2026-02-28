@@ -194,3 +194,22 @@ model ActiveVisitor {
 
   @@map("active_visitors")
 }
+
+// Audit Log Table - Track admin actions for security
+model AuditLog {
+  id          Int       @id @default(autoincrement())
+  userId      Int?      @map("user_id")
+  userEmail   String?   @map("user_email")
+  action      String    // LOGIN, LOGOUT, CREATE, UPDATE, DELETE, etc.
+  resource    String    // movie, settings, user, etc.
+  resourceId  String?   @map("resource_id")
+  details     String?   // JSON with additional details
+  ipAddress   String?   @map("ip_address")
+  userAgent   String?   @map("user_agent")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+  @@map("audit_logs")
+}

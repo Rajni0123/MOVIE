@@ -881,6 +881,50 @@ function extractDownloadLinks($: cheerio.CheerioAPI, baseUrl: string): { quality
     ];
     if (skipPatterns.some(p => lowerHref.includes(p))) return;
 
+    // CRITICAL: Block movie site domains - these are SOURCE sites, not download hosts
+    // These sites host movie pages, NOT download files
+    const movieSiteDomains = [
+      "dwo.hair", "dwo.so", "dwo.to",
+      "hdmovie2.com", "hdmovie2.ws", "hdmovie2.cx",
+      "filmyzilla", "filmywap", "filmyhit", "filmy4wap",
+      "khatrimaza", "bolly4u", "worldfree4u", "world4ufree",
+      "moviesda", "tamilrockers", "tamilyogi", "isaimini",
+      "movierulz", "moviezwap", "jalshamoviez", "jio-rockers",
+      "9xmovies", "8xmovies", "7starhd", "downloadhub",
+      "movieswood", "moviesbaba", "movieverse", "moviesverse",
+      "vegamovies", "hdhub4u", "extramovies", "ssrmovies",
+      "katmoviehd", "moviespapa", "themoviesflix",
+      "cinevood", "cinemavilla", "coolmoviez", "pagalworld",
+      "mp4moviez", "sdmoviespoint", "skymovieshd",
+    ];
+    const urlHostname = (() => {
+      try { return new URL(cleanHref).hostname.toLowerCase(); }
+      catch { return ""; }
+    })();
+    if (movieSiteDomains.some(d => urlHostname.includes(d))) {
+      return; // Skip - this is a movie site, not a download host
+    }
+
+    // CRITICAL: Block URLs that look like movie page slugs
+    // Movie pages typically have: /movie-name-year-quality/ or /movie-name-year-hindi/
+    const urlPath = (() => {
+      try { return new URL(cleanHref).pathname.toLowerCase(); }
+      catch { return lowerHref; }
+    })();
+    const looksLikeMoviePage = (
+      // Has year in path like /movie-2019/ or /movie-2024-hindi/
+      /\/[a-z0-9-]+-(?:19|20)\d{2}(?:-[a-z]+)*\/?$/i.test(urlPath) ||
+      // Has hindi/english/dual in path with movie-like slug
+      /\/[a-z0-9-]+(?:hindi|english|dual|hd|full)(?:-[a-z0-9]+)*\/?$/i.test(urlPath) ||
+      // Ends with common movie page patterns
+      /\/(download|movie|film|watch|stream)\/[a-z0-9-]+\/?$/i.test(urlPath)
+    );
+    // Only block if it's NOT a known file host
+    const isKnownFileHost = /gdrive|drive\.google|mediafire|mega\.|pixeldrain|gofile|terabox|filepress|gdflix|hubcloud|linkos|shrinkme/i.test(lowerHref);
+    if (looksLikeMoviePage && !isKnownFileHost) {
+      return; // Skip - this looks like a movie page URL, not a download link
+    }
+
     seenUrls.add(cleanHref);
 
     // Parse button text for quality, source, and size

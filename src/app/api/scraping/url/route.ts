@@ -2379,11 +2379,14 @@ async function scrapeDownloadPage(pageUrl: string): Promise<{ quality: string; l
         "telegram.me", "telegram.org", "whatsapp.com", "pinterest.com",
         "#comment", "#respond", "wp-login", "wp-admin",
         "/tag/", "/category/", "/author/", "?s=", "/feed/", "/search",
+        // Social share links - NOT download links
+        "t.me/share", "telegram.me/share", "api.whatsapp.com", "wa.me",
+        "facebook.com/sharer", "twitter.com/intent", "linkedin.com/share",
         // Image URLs - NEVER save as download links
         "image.tmdb.org", "tmdb.org/t/p", ".jpg", ".jpeg", ".png", ".webp", ".gif", ".svg", ".ico",
         "poster", "backdrop", "thumbnail", "avatar", "logo",
         // Theme/Developer links - NOT download links
-        "doothemes.com", "developer", "theme", "wordpress.org", "developer",
+        "doothemes.com", "developer", "theme", "wordpress.org",
         "developer.mozilla", "github.com", "stackoverflow", "w3.org"
       ];
       if (skipPatterns.some(p => lowerHref.includes(p))) return;

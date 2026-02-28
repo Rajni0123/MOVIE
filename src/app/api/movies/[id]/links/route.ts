@@ -70,6 +70,9 @@ export async function POST(
     // Reject invalid URLs - these should never be saved as download links
     const lowerUrl = linkUrl.toLowerCase();
     const invalidPatterns = [
+      // Social share links
+      "t.me/share", "telegram.me/share", "api.whatsapp.com", "wa.me",
+      "facebook.com/sharer", "twitter.com/intent",
       // Image URLs
       "image.tmdb.org", "tmdb.org/t/p",
       ".jpg", ".jpeg", ".png", ".webp", ".gif", ".svg", ".ico",

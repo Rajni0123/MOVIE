@@ -205,7 +205,7 @@ export function Header() {
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
       <div className="container flex h-14 items-center justify-between md:h-16">
         {/* Logo */}
-        <Link href="/" className="flex items-center gap-2">
+        <Link href="/" className="group flex items-center gap-2">
           {settings.logoType === "image" && settings.logoUrl ? (
             <img
               src={settings.logoUrl}
@@ -218,8 +218,17 @@ export function Header() {
             />
           ) : (
             <>
-              <LogoIcon className="h-6 w-6 text-primary" />
-              <span className="text-lg font-bold md:text-xl">{settings.logoText || settings.siteName}</span>
+              {/* Glowing Icon */}
+              <div className="relative">
+                <div className="absolute inset-0 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 blur-md opacity-75 group-hover:opacity-100 transition-opacity" />
+                <div className="relative rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 p-1.5">
+                  <LogoIcon className="h-5 w-5 text-white" />
+                </div>
+              </div>
+              {/* Gradient Text Logo */}
+              <span className="text-lg font-extrabold md:text-xl bg-gradient-to-r from-purple-500 via-pink-500 to-orange-400 bg-clip-text text-transparent drop-shadow-sm">
+                {settings.logoText || settings.siteName}
+              </span>
             </>
           )}
           {/* Show text alongside image logo if image loaded */}

@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import { Header } from "@/components/admin/Header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Film, CheckCircle, Share2, Eye, TrendingUp, Users, Monitor, Smartphone, Tablet, Globe, RefreshCw } from "lucide-react";
+import { Film, CheckCircle, Share2, Eye, TrendingUp, Users, Monitor, Smartphone, Tablet, Globe, RefreshCw, Server, Cpu, HardDrive, Activity } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
@@ -51,6 +52,54 @@ interface LiveVisitorStats {
   }>;
 }
 
+interface ServerStatus {
+  cpu: {
+    model: string;
+    cores: number;
+    usage: number;
+    loadAvg: {
+      "1min": string;
+      "5min": string;
+      "15min": string;
+    };
+  };
+  memory: {
+    total: number;
+    used: number;
+    free: number;
+    usagePercent: number;
+  };
+  disk: {
+    total: number;
+    used: number;
+    free: number;
+    percent: number;
+  };
+  system: {
+    platform: string;
+    hostname: string;
+    uptime: number;
+    nodeVersion: string;
+    primaryIP: string;
+  };
+  process: {
+    pid: number;
+    heapUsed: number;
+    heapTotal: number;
+    rss: number;
+    external: number;
+  };
+  pm2: {
+    name: string;
+    status: string;
+    uptime: number;
+    restarts: number;
+    memory: number;
+    cpu: number;
+  } | null;
+  timestamp: number;
+}
+
 export default function DashboardPage() {
   const [stats, setStats] = useState<DashboardStats>({
     totalMovies: 0,
@@ -74,6 +123,10 @@ export default function DashboardPage() {
   });
   const [visitorsLoading, setVisitorsLoading] = useState(true);
 
+  // Server status state
+  const [serverStatus, setServerStatus] = useState<ServerStatus | null>(null);
+  const [serverLoading, setServerLoading] = useState(true);
+
   // Fetch live visitors
   const fetchLiveVisitors = async () => {
     try {
@@ -87,6 +140,40 @@ export default function DashboardPage() {
     } finally {
       setVisitorsLoading(false);
     }
+  };
+
+  // Fetch server status
+  const fetchServerStatus = async () => {
+    try {
+      const res = await fetch("/api/admin/server-status", { credentials: "include" });
+      const data = await res.json();
+      if (data.success) {
+        setServerStatus(data.data);
+      }
+    } catch (error) {
+      console.error("Failed to fetch server status:", error);
+    } finally {
+      setServerLoading(false);
+    }
+  };
+
+  // Format bytes to human readable
+  const formatBytes = (bytes: number) => {
+    if (bytes === 0) return "0 B";
+    const k = 1024;
+    const sizes = ["B", "KB", "MB", "GB", "TB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+  };
+
+  // Format uptime to human readable
+  const formatUptime = (seconds: number) => {
+    const days = Math.floor(seconds / 86400);
+    const hours = Math.floor((seconds % 86400) / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    if (days > 0) return `${days}d ${hours}h ${minutes}m`;
+    if (hours > 0) return `${hours}h ${minutes}m`;
+    return `${minutes}m`;
   };
 
   useEffect(() => {
@@ -133,10 +220,16 @@ export default function DashboardPage() {
 
     fetchStats();
     fetchLiveVisitors();
+    fetchServerStatus();
 
     // Auto-refresh live visitors every 30 seconds
-    const interval = setInterval(fetchLiveVisitors, 30000);
-    return () => clearInterval(interval);
+    const visitorsInterval = setInterval(fetchLiveVisitors, 30000);
+    // Auto-refresh server status every 10 seconds
+    const serverInterval = setInterval(fetchServerStatus, 10000);
+    return () => {
+      clearInterval(visitorsInterval);
+      clearInterval(serverInterval);
+    };
   }, []);
 
   const statCards = [
@@ -280,6 +373,162 @@ export default function DashboardPage() {
                       </span>
                     </div>
                   ))}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Server Status Card */}
+        <Card className="mb-6 border-blue-500/30 bg-gradient-to-r from-blue-500/10 to-cyan-500/10">
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <CardTitle className="flex items-center gap-2 text-blue-600">
+                <Server className="h-5 w-5" />
+                Server Status
+              </CardTitle>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={fetchServerStatus}
+                className="text-blue-600 hover:text-blue-700 hover:bg-blue-100"
+              >
+                <RefreshCw className={`h-4 w-4 ${serverLoading ? "animate-spin" : ""}`} />
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {serverLoading && !serverStatus ? (
+              <p className="text-muted-foreground">Loading server status...</p>
+            ) : serverStatus ? (
+              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+                {/* CPU Usage */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="flex items-center gap-2 text-sm font-medium">
+                      <Cpu className="h-4 w-4 text-orange-500" />
+                      CPU Usage
+                    </span>
+                    <span className="text-sm font-bold text-orange-600">{serverStatus.cpu.usage}%</span>
+                  </div>
+                  <Progress value={serverStatus.cpu.usage} className="h-2" />
+                  <div className="text-xs text-muted-foreground">
+                    {serverStatus.cpu.cores} cores • Load: {serverStatus.cpu.loadAvg["1min"]}
+                  </div>
+                </div>
+
+                {/* Memory Usage */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="flex items-center gap-2 text-sm font-medium">
+                      <Activity className="h-4 w-4 text-purple-500" />
+                      Memory
+                    </span>
+                    <span className="text-sm font-bold text-purple-600">{serverStatus.memory.usagePercent}%</span>
+                  </div>
+                  <Progress value={serverStatus.memory.usagePercent} className="h-2" />
+                  <div className="text-xs text-muted-foreground">
+                    {formatBytes(serverStatus.memory.used)} / {formatBytes(serverStatus.memory.total)}
+                  </div>
+                </div>
+
+                {/* Disk Usage */}
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="flex items-center gap-2 text-sm font-medium">
+                      <HardDrive className="h-4 w-4 text-green-500" />
+                      Disk
+                    </span>
+                    <span className="text-sm font-bold text-green-600">{serverStatus.disk.percent}%</span>
+                  </div>
+                  <Progress value={serverStatus.disk.percent} className="h-2" />
+                  <div className="text-xs text-muted-foreground">
+                    {formatBytes(serverStatus.disk.used)} / {formatBytes(serverStatus.disk.total)}
+                  </div>
+                </div>
+
+                {/* System Info */}
+                <div className="space-y-2">
+                  <span className="flex items-center gap-2 text-sm font-medium">
+                    <Globe className="h-4 w-4 text-blue-500" />
+                    System Info
+                  </span>
+                  <div className="space-y-1 text-xs">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Uptime:</span>
+                      <span className="font-medium">{formatUptime(serverStatus.system.uptime)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Platform:</span>
+                      <span className="font-medium">{serverStatus.system.platform}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Node:</span>
+                      <span className="font-medium">{serverStatus.system.nodeVersion}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <p className="text-muted-foreground">Failed to load server status</p>
+            )}
+
+            {/* PM2 Process Info */}
+            {serverStatus?.pm2 && (
+              <div className="mt-4 border-t pt-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="text-sm font-medium">PM2 Process: {serverStatus.pm2.name}</span>
+                  <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                    serverStatus.pm2.status === "online"
+                      ? "bg-green-100 text-green-700"
+                      : "bg-red-100 text-red-700"
+                  }`}>
+                    {serverStatus.pm2.status}
+                  </span>
+                </div>
+                <div className="grid grid-cols-4 gap-4 text-xs">
+                  <div>
+                    <span className="text-muted-foreground">Memory:</span>
+                    <span className="ml-1 font-medium">{formatBytes(serverStatus.pm2.memory)}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">CPU:</span>
+                    <span className="ml-1 font-medium">{serverStatus.pm2.cpu}%</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Restarts:</span>
+                    <span className="ml-1 font-medium">{serverStatus.pm2.restarts}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Uptime:</span>
+                    <span className="ml-1 font-medium">
+                      {serverStatus.pm2.uptime ? formatUptime((Date.now() - serverStatus.pm2.uptime) / 1000) : "N/A"}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Process Memory */}
+            {serverStatus && (
+              <div className="mt-4 border-t pt-4">
+                <div className="grid grid-cols-4 gap-4 text-xs">
+                  <div>
+                    <span className="text-muted-foreground">Heap Used:</span>
+                    <span className="ml-1 font-medium">{formatBytes(serverStatus.process.heapUsed)}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Heap Total:</span>
+                    <span className="ml-1 font-medium">{formatBytes(serverStatus.process.heapTotal)}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">RSS:</span>
+                    <span className="ml-1 font-medium">{formatBytes(serverStatus.process.rss)}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">PID:</span>
+                    <span className="ml-1 font-medium">{serverStatus.process.pid}</span>
+                  </div>
                 </div>
               </div>
             )}

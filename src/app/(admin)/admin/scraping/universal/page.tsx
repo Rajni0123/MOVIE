@@ -334,11 +334,25 @@ export default function UniversalScraperPage() {
     return normalized + year;
   };
 
+  // Extract core title for searching (remove quality tags, keep just the name)
+  const extractCoreTitle = (title: string): string => {
+    // Remove everything after year in parentheses, or common quality/format tags
+    let core = title
+      .replace(/\s*(hindi|dubbed|hd|netflix|complete|season|jiohotstar|amzn|web-dl|webrip|hdtc|hdcam|dvdrip|bluray|brrip|v2|v3|hdts|predvd|camrip|ts|tc|cam).*/i, '')
+      .replace(/\s*\(\d{4}\).*/, match => match.split(')')[0] + ')') // Keep just (year)
+      .trim();
+    // Also extract just the name without year for broader search
+    const nameOnly = core.replace(/\s*\(\d{4}\)/, '').trim();
+    return nameOnly.length > 2 ? nameOnly : core;
+  };
+
   // Check if movie already exists (pre-scrape duplicate check)
   const checkDuplicateMovie = async (title: string): Promise<boolean> => {
     try {
+      // Extract core title for searching (e.g., "Dead Sea" from "Dead Sea (2024) Hindi Dubbed JioHotstar")
+      const coreTitle = extractCoreTitle(title);
       // Use all=true to check against ALL movies (not just published)
-      const res = await fetch(`/api/movies/search?q=${encodeURIComponent(title)}&limit=10&all=true`);
+      const res = await fetch(`/api/movies/search?q=${encodeURIComponent(coreTitle)}&limit=20&all=true`);
       const data = await res.json();
       if (data.success && data.data?.length > 0) {
         const normalizedInput = normalizeTitle(title);

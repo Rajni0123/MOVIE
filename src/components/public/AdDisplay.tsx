@@ -62,20 +62,20 @@ export function AdScriptsLoader() {
   useEffect(() => {
     if (!settings) return;
 
-    // Pop ads only - works as pop-under, doesn't block navigation
+    // Pop ads - works as pop-under, doesn't block navigation (all devices)
     if (settings.popAdsEnabled && settings.popAdsCode) {
       injectScript(settings.popAdsCode, "pop-ads");
     }
 
-    // Propeller/Monetag DISABLED - was blocking movie page navigation on mobile
-    // if (settings.propellerAdsEnabled && settings.propellerAdsCode) {
-    //   injectScript(settings.propellerAdsCode, "propeller-ads");
-    // }
+    // Propeller/Monetag - ONLY on desktop (was blocking mobile navigation)
+    if (!isMobile && settings.propellerAdsEnabled && settings.propellerAdsCode) {
+      injectScript(settings.propellerAdsCode, "propeller-ads");
+    }
 
-    // Adsterra pop DISABLED - was also blocking navigation
-    // if (settings.adsterraEnabled && settings.adsterraPopCode) {
-    //   injectScript(settings.adsterraPopCode, "adsterra-pop");
-    // }
+    // Adsterra pop - ONLY on desktop (was blocking mobile navigation)
+    if (!isMobile && settings.adsterraEnabled && settings.adsterraPopCode) {
+      injectScript(settings.adsterraPopCode, "adsterra-pop");
+    }
   }, [settings, isMobile]);
 
   return null;

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAuth } from "@/lib/auth";
 import * as cheerio from "cheerio";
-import { generateMetaTitle, generateMetaDescription } from "@/lib/utils";
+import { generateMetaTitle, generateSeoDescription } from "@/lib/utils";
 
 interface ScrapedData {
   title: string;
@@ -116,7 +116,7 @@ export async function POST(request: NextRequest) {
       director,
       cast,
       metaTitle: generateMetaTitle(title, releaseYear || undefined),
-      metaDescription: generateMetaDescription(description),
+      metaDescription: generateSeoDescription(title, description, genres, releaseYear || undefined),
     };
 
     // ALWAYS try TMDB for better images - this is critical for good posters
@@ -269,13 +269,33 @@ function extractDescription($: cheerio.CheerioAPI): string {
 }
 
 function cleanDescription(desc: string): string {
-  return desc
+  let cleaned = desc
+    // Remove site names
     .replace(/worldfree4u[.\s]*(com|net|org|trade|ist)?/gi, "")
+    // Remove download instructions
     .replace(/click.*download/gi, "")
     .replace(/download.*link/gi, "")
+    // Remove structured metadata patterns
+    .replace(/IMDb Rating:\s*[\d.]+\/10/gi, "")
+    .replace(/Genre:\s*[^.]+/gi, "")
+    .replace(/Director:\s*[^.]+/gi, "")
+    .replace(/Release Date:\s*[^.]+/gi, "")
+    .replace(/Star Cast:\s*[^.]+/gi, "")
+    .replace(/Movie Name:\s*[^.]+/gi, "")
+    .replace(/Quality:\s*[^.]+/gi, "")
+    .replace(/Language:\s*[^.]+/gi, "")
+    .replace(/Size:\s*[^.]+/gi, "")
+    .replace(/Format:\s*[^.]+/gi, "")
     .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, 1000);
+    .trim();
+
+  // Try to extract story/synopsis if present
+  const storyMatch = cleaned.match(/(?:Movie Story|Story|Synopsis|Plot)[:\s]+(.+)/i);
+  if (storyMatch && storyMatch[1] && storyMatch[1].length > 50) {
+    cleaned = storyMatch[1].trim();
+  }
+
+  return cleaned.slice(0, 1000);
 }
 
 function extractPoster($: cheerio.CheerioAPI, baseUrl: string): string {

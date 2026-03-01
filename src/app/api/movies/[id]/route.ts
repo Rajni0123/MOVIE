@@ -3,7 +3,7 @@ import prisma from "@/lib/db/prisma";
 import { requireAuth } from "@/lib/auth";
 import { validateMovieData } from "@/lib/utils/validators";
 import { generateSlug, extractYear } from "@/lib/utils/slug";
-import { generateMetaDescription, generateMetaTitle } from "@/lib/utils";
+import { generateSeoDescription, generateMetaTitle } from "@/lib/utils";
 import { indexMovie } from "@/lib/seo/indexnow";
 import { ApiResponse } from "@/types/api";
 import { MovieFormData, MovieWithRelations } from "@/types/movie";
@@ -127,7 +127,12 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     // Update meta fields if title changed
     const year = extractYear(body.releaseDate || existingMovie.releaseDate?.toISOString());
     const metaTitle = body.metaTitle || (body.title ? generateMetaTitle(body.title, year) : undefined);
-    const metaDescription = body.metaDescription || (body.description ? generateMetaDescription(body.description) : undefined);
+    const metaDescription = body.metaDescription || (body.description ? generateSeoDescription(
+      body.title || existingMovie.title,
+      body.description,
+      body.genres,
+      year
+    ) : undefined);
 
     const movie = await prisma.movie.update({
       where: { id: movieId },

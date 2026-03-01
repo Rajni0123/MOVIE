@@ -3,7 +3,7 @@ import prisma from "@/lib/db/prisma";
 import { requireAuth } from "@/lib/auth";
 import { validateMovieData, validatePagination } from "@/lib/utils/validators";
 import { generateSlug, extractYear } from "@/lib/utils/slug";
-import { generateMetaDescription, generateMetaTitle } from "@/lib/utils";
+import { generateSeoDescription, generateMetaTitle } from "@/lib/utils";
 import { ApiResponse } from "@/types/api";
 import { MovieFormData, MovieWithRelations, PaginatedMovies } from "@/types/movie";
 import { Prisma } from "@prisma/client";
@@ -222,7 +222,12 @@ export async function POST(request: NextRequest) {
 
     // Generate meta fields if not provided
     const metaTitle = body.metaTitle || generateMetaTitle(body.title, year);
-    const metaDescription = body.metaDescription || generateMetaDescription(body.description || "");
+    const metaDescription = body.metaDescription || generateSeoDescription(
+      body.title,
+      body.description,
+      body.genres,
+      year
+    );
 
     const movie = await prisma.movie.create({
       data: {

@@ -288,20 +288,40 @@ function extractPoster($: cheerio.CheerioAPI, baseUrl: string): string {
     ".thumbnail img",
   ];
 
+  // Patterns to skip - these are not real movie posters
+  const skipPatterns = [
+    "placeholder", "loading", "data:image",
+    "screenshot.png", "theme", "logo", "icon", "banner",
+    "avatar", "profile", "favicon", "watermark",
+    "wp-content/themes", "ads", "advertisement"
+  ];
+
   for (const selector of selectors) {
     if (selector.includes("meta")) {
       const content = $(selector).attr("content");
-      if (content && content.includes("http")) return content;
+      if (content && content.includes("http")) {
+        // Check if meta image is a bad pattern
+        const isSkip = skipPatterns.some(p => content.toLowerCase().includes(p));
+        if (!isSkip) return content;
+      }
     } else {
-      const img = $(selector).first();
-      const src = img.attr("src") || img.attr("data-src") || img.attr("data-lazy-src");
-      if (src) {
-        // Skip placeholder images
-        if (src.includes("placeholder") || src.includes("loading") || src.includes("data:image")) {
-          continue;
+      const images = $(selector);
+      for (let i = 0; i < images.length; i++) {
+        const img = $(images[i]);
+        const src = img.attr("src") || img.attr("data-src") || img.attr("data-lazy-src");
+        if (src) {
+          // Skip bad images
+          const isSkip = skipPatterns.some(p => src.toLowerCase().includes(p));
+          if (isSkip) continue;
+
+          // Skip very small images (likely icons)
+          const width = parseInt(img.attr("width") || "0");
+          const height = parseInt(img.attr("height") || "0");
+          if ((width > 0 && width < 100) || (height > 0 && height < 100)) continue;
+
+          if (src.startsWith("http")) return src;
+          return src.startsWith("/") ? baseUrl + src : baseUrl + "/" + src;
         }
-        if (src.startsWith("http")) return src;
-        return src.startsWith("/") ? baseUrl + src : baseUrl + "/" + src;
       }
     }
   }

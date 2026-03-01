@@ -1,9 +1,11 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 import { generateDefaultMetadata } from "@/lib/seo/meta-generator";
 import { ClientComponentsWrapper } from "@/components/shared/ClientComponentsWrapper";
 import { VerificationMetaTags } from "@/components/shared/VerificationMetaTags";
+import { AdScriptsHead } from "@/components/shared/AdScriptsHead";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -52,6 +54,8 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} min-h-screen antialiased overscroll-none`}
         suppressHydrationWarning
       >
+        {/* Server-side ad scripts for verification */}
+        <AdScriptsHead />
         <ClientComponentsWrapper>
           {children}
         </ClientComponentsWrapper>

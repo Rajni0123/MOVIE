@@ -21,6 +21,9 @@ const AD_SETTINGS_KEYS = [
   "footerBannerCode",
   "inContentBannerEnabled",
   "inContentBannerCode",
+  // Verification meta tags
+  "monetagMetaTag",
+  "customVerificationMeta",
 ];
 
 // GET /api/admin/ads - Get all ad settings

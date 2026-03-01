@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { generateDefaultMetadata } from "@/lib/seo/meta-generator";
 import { ClientComponentsWrapper } from "@/components/shared/ClientComponentsWrapper";
+import { VerificationMetaTags } from "@/components/shared/VerificationMetaTags";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -45,6 +46,8 @@ export default function RootLayout({
         <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png" />
         <link rel="apple-touch-icon" sizes="180x180" href="/icon-192.png" />
         <meta name="mobile-web-app-capable" content="yes" />
+        {/* @ts-expect-error Async Server Component */}
+        <VerificationMetaTags />
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} min-h-screen antialiased overscroll-none`}

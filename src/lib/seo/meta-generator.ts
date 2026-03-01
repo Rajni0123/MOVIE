@@ -17,12 +17,20 @@ export function generateMovieKeywords(movie: Movie, genres: string[] = []): stri
   keywords.push(`${movie.title} full movie`);
   keywords.push(`${movie.title} free download`);
   keywords.push(`download ${movie.title}`);
-  
+
+  // Watch/Stream keywords (NEW - for SEO variation)
+  keywords.push(`watch ${movie.title} online`);
+  keywords.push(`${movie.title} watch online free`);
+  keywords.push(`${movie.title} stream`);
+  keywords.push(`${movie.title} streaming`);
+  keywords.push(`${movie.title} online`);
+
   // Year-based keywords
   if (year) {
     keywords.push(`${movie.title} ${year}`);
     keywords.push(`${movie.title} ${year} download`);
     keywords.push(`${movie.title} ${year} full movie`);
+    keywords.push(`watch ${movie.title} ${year}`);
     keywords.push(`${year} movies download`);
   }
 
@@ -30,6 +38,7 @@ export function generateMovieKeywords(movie: Movie, genres: string[] = []): stri
   keywords.push(`${movie.title} 480p`);
   keywords.push(`${movie.title} 720p`);
   keywords.push(`${movie.title} 1080p`);
+  keywords.push(`${movie.title} 4K`);
   keywords.push(`${movie.title} HD`);
   keywords.push(`${movie.title} HD download`);
 
@@ -37,6 +46,7 @@ export function generateMovieKeywords(movie: Movie, genres: string[] = []): stri
   genres.forEach(genre => {
     keywords.push(`${genre} movies`);
     keywords.push(`${genre} movies download`);
+    keywords.push(`watch ${genre} movies`);
     if (year) {
       keywords.push(`${genre} movies ${year}`);
     }
@@ -52,11 +62,13 @@ export function generateMovieKeywords(movie: Movie, genres: string[] = []): stri
   keywords.push(`${movie.title} Hindi`);
   keywords.push(`${movie.title} English`);
   keywords.push(`${movie.title} dual audio`);
+  keywords.push(`${movie.title} Hindi dubbed`);
 
   // General keywords
   keywords.push("free movie download");
   keywords.push("HD movies");
   keywords.push("latest movies");
+  keywords.push("watch movies online");
 
   return keywords;
 }
@@ -90,11 +102,15 @@ export function generateMovieMetadata(movie: Movie, genres: string[] = []): Meta
   // SEO-optimized description with call-to-action
   // Includes: Movie name, year, quality options, genres, and CTA
   const shortDesc = movie.description
-    ? movie.description.slice(0, 80).trim() + "..."
+    ? movie.description.slice(0, 100).trim() + "..."
     : "";
 
+  // Get secondary genre if available
+  const secondaryGenre = genres.length > 1 ? genres[1] : "";
+
+  // Enhanced description with more content depth and keyword variation
   const description = movie.metaDescription ||
-    `⬇️ Download ${cleanTitle}${year ? ` (${year})` : ""} full ${primaryGenre} movie in HD quality. Available in 480p, 720p, 1080p. ${shortDesc} Fast & free download links!`;
+    `⬇️ Download ${cleanTitle}${year ? ` (${year})` : ""} full ${primaryGenre}${secondaryGenre ? ` ${secondaryGenre}` : ""} movie in HD quality. Watch online or download in 480p, 720p, 1080p, 4K. ${shortDesc}${movie.director ? ` Directed by ${movie.director}.` : ""} Free streaming & fast download links!`;
 
   // Full title with site name for OG/Twitter (these don't use template)
   const fullTitle = `${title} | ${SITE_NAME}`;
@@ -139,32 +155,48 @@ export function generateMovieMetadata(movie: Movie, genres: string[] = []): Meta
 export function generateHomeMetadata(): Metadata {
   const currentYear = new Date().getFullYear();
   const keywords = [
+    // Download keywords
     "download movies free",
     "free movie download",
     "HD movies download",
     "latest movies download",
     `${currentYear} movies download`,
     `new movies ${currentYear}`,
+    // Quality keywords
     "480p movies download",
     "720p movies download",
     "1080p movies download",
+    "4K movies download",
+    // Streaming/Watch keywords
+    "watch movies online free",
+    "stream movies free",
+    "watch online movies HD",
+    "free streaming movies",
+    "online movies watch",
+    // Language keywords
     "dual audio movies",
     "Hindi movies download",
     "English movies download",
+    "Hindi dubbed movies",
+    "South Indian movies Hindi",
+    // Industry keywords
     "Hollywood movies download",
     "Bollywood movies download",
-    "free HD movies",
-    "movie download site",
-    "watch movies online free",
+    "South movies download",
     "latest Hollywood movies",
     "latest Bollywood movies",
+    // General keywords
+    "free HD movies",
+    "movie download site",
+    "best movie website",
+    "movie download hub",
   ].join(", ");
 
   // Homepage title without site name (template adds it)
   const title = `Download Latest Movies Free - HD 480p 720p 1080p ${currentYear}`;
   const fullTitle = `${SITE_NAME} - ${title}`;
 
-  const description = `⬇️ Download latest Bollywood & Hollywood movies FREE in HD quality (480p, 720p, 1080p). New ${currentYear} releases updated daily. Fast download links, no signup required!`;
+  const description = `⬇️ Download & watch latest Bollywood, Hollywood & South movies FREE in HD quality (480p, 720p, 1080p, 4K). New ${currentYear} releases updated daily. Stream online or download with fast links, no signup required!`;
 
   return {
     title: fullTitle, // Full title for homepage

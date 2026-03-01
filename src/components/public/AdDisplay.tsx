@@ -62,20 +62,20 @@ export function AdScriptsLoader() {
   useEffect(() => {
     if (!settings) return;
 
-    // Pop ads work on all devices (but more important for mobile)
+    // Pop ads only - works as pop-under, doesn't block navigation
     if (settings.popAdsEnabled && settings.popAdsCode) {
       injectScript(settings.popAdsCode, "pop-ads");
     }
 
-    // Propeller ads work on all devices
-    if (settings.propellerAdsEnabled && settings.propellerAdsCode) {
-      injectScript(settings.propellerAdsCode, "propeller-ads");
-    }
+    // Propeller/Monetag DISABLED - was blocking movie page navigation on mobile
+    // if (settings.propellerAdsEnabled && settings.propellerAdsCode) {
+    //   injectScript(settings.propellerAdsCode, "propeller-ads");
+    // }
 
-    // Adsterra pop works on all devices
-    if (settings.adsterraEnabled && settings.adsterraPopCode) {
-      injectScript(settings.adsterraPopCode, "adsterra-pop");
-    }
+    // Adsterra pop DISABLED - was also blocking navigation
+    // if (settings.adsterraEnabled && settings.adsterraPopCode) {
+    //   injectScript(settings.adsterraPopCode, "adsterra-pop");
+    // }
   }, [settings, isMobile]);
 
   return null;

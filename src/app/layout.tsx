@@ -46,7 +46,6 @@ export default function RootLayout({
         <link rel="icon" type="image/png" sizes="32x32" href="/favicon.png" />
         <link rel="apple-touch-icon" sizes="180x180" href="/icon-192.png" />
         <meta name="mobile-web-app-capable" content="yes" />
-        {/* @ts-expect-error Async Server Component */}
         <VerificationMetaTags />
       </head>
       <body

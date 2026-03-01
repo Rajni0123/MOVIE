@@ -154,14 +154,8 @@ export async function POST(request: NextRequest) {
         }
         console.log("[WORLD SCRAPE] TMDB data applied successfully");
       } else {
-        console.log("[WORLD SCRAPE] No TMDB data found");
-        // If no TMDB, clear bad poster (WorldFree4u watermarked images)
-        if (scrapedData.posterUrl.includes("worldfree4u") ||
-            scrapedData.posterUrl.includes("screenshot") ||
-            scrapedData.posterUrl.includes("logo")) {
-          scrapedData.posterUrl = "";
-          scrapedData.backdropUrl = "";
-        }
+        console.log("[WORLD SCRAPE] No TMDB data found, keeping scraped poster");
+        // Keep the scraped poster even if it's not ideal - better than nothing
       }
     } catch (e) {
       console.log("[WORLD SCRAPE] TMDB lookup failed:", e);
@@ -318,7 +312,7 @@ function extractPoster($: cheerio.CheerioAPI, baseUrl: string): string {
 // Follow redirect links to get actual download URL
 async function resolveRedirectUrl(url: string): Promise<string> {
   // Known redirect/shortener domains that need resolution
-  const redirectDomains = ["linkos.site", "link.clik.pw", "linksfire.co", "techymedies.com", "shrinkme", "za.gl", "ouo.io", "linksunlock"];
+  const redirectDomains = ["linkos.site", "link.clik.pw", "linksfire.co", "techymedies.com", "shrinkme", "za.gl", "ouo.io", "linksunlock", "epios.site", "epios"];
 
   const isRedirect = redirectDomains.some(domain => url.includes(domain));
   if (!isRedirect) return url;
@@ -370,7 +364,7 @@ async function resolveRedirectUrl(url: string): Promise<string> {
 
     for (const pattern of downloadPatterns) {
       const link = $(pattern).first().attr("href");
-      if (link && link.startsWith("http") && !link.includes("linkos")) {
+      if (link && link.startsWith("http") && !link.includes("linkos") && !link.includes("epios")) {
         console.log(`[WORLD SCRAPE] Found actual link: ${link}`);
         return link;
       }
@@ -382,6 +376,7 @@ async function resolveRedirectUrl(url: string): Promise<string> {
       const href = $(el).attr("href");
       if (href && href.startsWith("http") &&
           !href.includes("linkos") &&
+          !href.includes("epios") &&
           !href.includes("worldfree4u") &&
           !href.includes("facebook") &&
           !href.includes("twitter") &&
@@ -455,7 +450,7 @@ async function extractWorldFree4uLinks($: cheerio.CheerioAPI, baseUrl: string): 
                        $(el).hasClass("download");
 
     // Also check for known download hosts
-    const isDownloadHost = /linkos|gdrive|mega|mediafire|pixeldrain|gofile|streamtape|doodstream|mixdrop|uptobox|1fichier|rapidgator|nitroflare|katfile|uploadhaven|turbobit/i.test(href);
+    const isDownloadHost = /linkos|epios|gdrive|mega|mediafire|pixeldrain|gofile|streamtape|doodstream|mixdrop|uptobox|1fichier|rapidgator|nitroflare|katfile|uploadhaven|turbobit/i.test(href);
 
     if (isDownload || isDownloadHost) {
       seenUrls.add(href);

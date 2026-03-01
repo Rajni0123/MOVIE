@@ -920,7 +920,7 @@ function extractDownloadLinks($: cheerio.CheerioAPI, baseUrl: string): { quality
       /\/(download|movie|film|watch|stream)\/[a-z0-9-]+\/?$/i.test(urlPath)
     );
     // Only block if it's NOT a known file host
-    const isKnownFileHost = /gdrive|drive\.google|mediafire|mega\.|pixeldrain|gofile|terabox|filepress|gdflix|hubcloud|linkos|shrinkme/i.test(lowerHref);
+    const isKnownFileHost = /gdrive|drive\.google|mediafire|mega\.|pixeldrain|gofile|terabox|filepress|gdflix|hubcloud|linkos|epios|shrinkme/i.test(lowerHref);
     if (looksLikeMoviePage && !isKnownFileHost) {
       return; // Skip - this looks like a movie page URL, not a download link
     }
@@ -987,7 +987,7 @@ function extractDownloadLinks($: cheerio.CheerioAPI, baseUrl: string): { quality
     const worldfree4uPattern = /(\d{3,4})[pP]\s*(AAC|HEVC|x264|x265)/i;
     const hasFileSize = /\d+(?:\.\d+)?\s*(GB|MB)/i.test(text + " " + parentText);
 
-    if (worldfree4uPattern.test(text + " " + parentText) && (hasFileSize || href.includes("linkos"))) {
+    if (worldfree4uPattern.test(text + " " + parentText) && (hasFileSize || href.includes("linkos") || href.includes("epios"))) {
       console.log(`Found WorldFree4u style link: "${text}" -> ${href}`);
       addLink(href, text, parentText);
     }
@@ -1000,8 +1000,8 @@ function extractDownloadLinks($: cheerio.CheerioAPI, baseUrl: string): { quality
     const text = $(el).text().trim();
     const lowerHref = href.toLowerCase();
 
-    // Check for linkos.site and similar services
-    if (lowerHref.includes("linkos.site") || lowerHref.includes("shrinkme.io") ||
+    // Check for linkos.site, epios.site and similar services
+    if (lowerHref.includes("linkos.site") || lowerHref.includes("epios.site") || lowerHref.includes("shrinkme.io") ||
         lowerHref.includes("link.vip") || lowerHref.includes("howfly")) {
       // For WorldFree4u style: Get quality info from previous H4 sibling
       let parentText = $(el).parent().text().trim();
@@ -1040,7 +1040,7 @@ function extractDownloadLinks($: cheerio.CheerioAPI, baseUrl: string): { quality
           const linkText = link.text().trim();
 
           // Check if it's a download link
-          if (href.includes("linkos") || href.includes("gdflix") || href.includes("drive.google") ||
+          if (href.includes("linkos") || href.includes("epios") || href.includes("gdflix") || href.includes("drive.google") ||
               linkText.toLowerCase().includes("download")) {
             console.log(`Found WorldFree4u pattern: H4="${headingText.slice(0, 40)}..." -> ${href}`);
             addLink(href, linkText, headingText);
@@ -1117,7 +1117,7 @@ function extractDownloadLinks($: cheerio.CheerioAPI, baseUrl: string): { quality
     "letsboost", "howifx", "earn4link", "linkvertise", "adbull",
     "links4earn", "highkeyfinance", "bindaaslinks", "link1s", "ez4short",
     // WorldFree4u and similar sites
-    "linkos.site", "linkos", "shrinkme.io", "link.vip", "shrink.pe",
+    "linkos.site", "linkos", "epios.site", "epios", "shrinkme.io", "link.vip", "shrink.pe",
     "myimg.click", "imgshare", "howfly", "adrinolinks", "earnlink",
     // New popular file hosts (2024-2025)
     "fastupload", "uploadever", "uploadhub", "uploadcloud", "uploadboy",
@@ -1891,7 +1891,7 @@ function isDownloadUrl(url: string): boolean {
     "filelion", "linkbox", "terabox", "wetransfer", "480p", "720p",
     "1080p", "2160p", "4k", "dl=", "file=", "get=", "link=", "server",
     // WorldFree4u and similar sites
-    "linkos.site", "linkos", "shrinkme.io", "link.vip", "shrink.pe",
+    "linkos.site", "linkos", "epios.site", "epios", "shrinkme.io", "link.vip", "shrink.pe",
     "howfly", "adrinolinks", "earnlink", "gdflix", "gdtotv2",
   ];
   
@@ -2430,7 +2430,7 @@ async function scrapeDownloadPage(pageUrl: string): Promise<{ quality: string; l
       "gdflix", "gdtotv2", "gdtotv", "hubdrive", "drivelinks", "drivehub",
       "sharer", "sharerw", "instantlinks", "technorozen", "rocklinks",
       // WorldFree4u style links
-      "linkos.site", "linkos", "shrinkme.io", "link.vip", "shrink.pe",
+      "linkos.site", "linkos", "epios.site", "epios", "shrinkme.io", "link.vip", "shrink.pe",
       "howfly", "adrinolinks", "earnlink"
     ];
 
